@@ -48,12 +48,21 @@
 - [ ] Add filesystem safeguards so only `app/`, `styles/`, and `public/outputs/` are writable; ensure directory creation and path joins are pre-validated. *(Theme updates now use guarded paths; extend checks to broader Codex file edits.)*
 - [x] Document API request/response formats and local `.env` requirements once endpoints are in place.
 
-## 9. OpenAI Production Integration *(in progress)*
+## 9. OpenAI Production Integration *(completed)*
 - [x] Rename API routes to match final spec (`/api/images/generate`, `/api/images/latest`, `/api/videos/generate`, `/api/codex/{agent,theme,undo}`) and update front-end consumers.
 - [x] Replace image mock generator with OpenAI Images `gpt-image-1-mini` calls (5× portrait PNG) and persist decoded buffers under `public/outputs/<runId>/image-*.png`.
 - [x] Implement Sora `sora-2` video generation: preprocess selected image to 1280×720 via `sharp`, submit as `input_reference`, poll job status, stream progress into `progress.json`, and download the final MP4 to the run directory.
 - [x] Build front-end request flow in `app/page.tsx` to post multipart sketch + prompt, hydrate gallery state, handle selection and error feedback.
 - [x] Add progress polling UI (`VideoPlaceholder` and related components) that reads `progress.json` until the MP4 exists.
 - [x] Implement Codex agent/theme/undo endpoints using `@openai/codex-sdk`, enforce sandbox + git snapshot rules, and update `SidePanel` SSE client to render streamed events.
-- [ ] Ensure filesystem guardrails match allowlist requirements before enabling production model calls.
+- [x] Ensure filesystem guardrails match allowlist requirements before enabling production model calls.
 + Later: add analytics/logging around model calls or production hardening (rate limits, retries, billing alerts) if needed.
+
+## 10. Codex Workflow Hardening *(planned)*
+- [ ] **Agent execution flow**: Keep the SidePanel prompt submission UX, but run Codex without creating git snapshots automatically. Only snapshot when applying edits.
+- [ ] **Filesystem safety**: Implement `applyCodexPlan()` and `applyEditsSafely()` to enforce allowed paths (`app/`, `styles/`, `public/outputs/`) and verify `oldText` before writing files.
+- [ ] **Event normalization**: Stream all SSE payloads as `event: message` with `{ type, text, payload }` so the UI can display consistent logs.
+- [ ] **Completion signals**: Send `event: done` with `{ ok: true/false }` and ensure error states close the stream immediately.
+- [ ] **Abort support**: Add an API or SSE signal so the SidePanel’s “중단” 버튼 can cancel an in-flight Codex run.
+- [ ] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
+- [ ] **Snapshot clean-up**: Track active snapshots and auto-drop stale ones, preventing the stash stack from growing without bounds.
