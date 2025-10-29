@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+> **Backend mocks**: Node runtime API routes live under `app/api/` and simulate the image generation, latest asset lookup, video generation, and Codex builder endpoints. See `docs/backend-api.md` for request/response contracts and environment requirements.
+
 ## Getting Started
 
 First, run the development server:

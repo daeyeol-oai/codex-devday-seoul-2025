@@ -37,3 +37,13 @@
 - [ ] Validate layout in desktop and tablet breakpoints; document gaps for mobile adaptation if scope is desktop-only.
 - [x] Run `npm run lint` and manual browser checks before sign-off.
 - [x] Track outstanding work (API integration, real asset pipelines, error handling) for future tasks.
+
+## 8. Backend API Implementation
+- [x] Scaffold Node runtime API routes in `app/api/` for images, latest assets, video generation, and Codex builder controls.
+- [x] Implement multipart handler that validates prompt and sketch inputs, saves uploads under `public/outputs/<runId>/`, and returns five-image metadata as JSON.
+- [x] Build latest assets endpoint that prioritizes `chosen/` directories, falls back to newest timestamped run, and returns image plus video URLs in a consistent JSON payload.
+- [x] Create video generation endpoint that validates JSON payload, records staged progress updates to `progress.json`, and emits the final 8-second video URL.
+- [ ] Deliver Codex SSE endpoint that streams plan/command/file-change/error events while enforcing workspace-write sandbox and git stash snapshots for undo. *(Mocked SSE events are in place; real Codex execution and undo safeguards remain TODO.)*
+- [x] Introduce singleton OpenAI and Codex SDK clients with early failure when `OPENAI_API_KEY` is missing.
+- [ ] Add filesystem safeguards so only `app/`, `styles/`, and `public/outputs/` are writable; ensure directory creation and path joins are pre-validated. *(Outputs guard exists; broader sandbox controls still pending.)*
+- [x] Document API request/response formats and local `.env` requirements once endpoints are in place.
