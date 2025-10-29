@@ -1,5 +1,3 @@
-'use server'
-
 export type RequiredEnvVar = 'OPENAI_API_KEY'
 
 export function getEnv(name: RequiredEnvVar) {

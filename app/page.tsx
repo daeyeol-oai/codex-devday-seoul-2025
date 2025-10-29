@@ -1,139 +1,317 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { GeneratedGallery } from '@/components/GeneratedGallery'
-import { UploadControls } from '@/components/UploadControls'
-import { VideoPreview } from '@/components/VideoPreview'
-import { VideoRequestForm } from '@/components/VideoRequestForm'
-import type { GeneratedImage } from '@/types/media'
+import { ImageCarousel } from '@/app/components/ImageCarousel'
+import { ImageGrid } from '@/app/components/ImageGrid'
+import { VideoPlaceholder } from '@/app/components/VideoPlaceholder'
+import type {
+  GeneratedImage,
+  ImageGenerationResponse,
+  LatestAssetsResponse,
+  VideoGenerationResponse,
+  VideoProgressSnapshot,
+} from '@/types/media'
 
-const ROBOT_COLORS: Array<Pick<GeneratedImage, 'backgroundColor' | 'accentColor'>> =
-  [
-    { backgroundColor: '#f2d6a0', accentColor: '#d68c45' },
-    { backgroundColor: '#f4dfbc', accentColor: '#e0a937' },
-    { backgroundColor: '#d8e8e8', accentColor: '#5ca8b5' },
-    { backgroundColor: '#f1e0c5', accentColor: '#4d9db8' },
-    { backgroundColor: '#f3ddbe', accentColor: '#e78b2f' },
-  ]
+type VideoResult = VideoGenerationResponse['video']
 
-const ROBOT_TITLES = [
-  'Quiet companion',
-  'Curious explorer',
-  'Sketch helper',
-  'Story sidekick',
-  'Bright inventor',
-]
+const PROGRESS_POLL_MS = 2000
 
-function createMockImages(): GeneratedImage[] {
-  const timestamp = Date.now()
-  return ROBOT_COLORS.map((colors, index) => ({
-    id: `image-${timestamp}-${index}`,
-    title: ROBOT_TITLES[index % ROBOT_TITLES.length],
-    description: 'A playful robot rendition generated from the latest prompt.',
-    ...colors,
-  }))
-}
-
-export default function Home() {
-  const [fileName, setFileName] = useState<string>()
+export default function HomePage() {
+  const [sketchFile, setSketchFile] = useState<File | null>(null)
+  const [sketchLabel, setSketchLabel] = useState('No file chosen')
   const [prompt, setPrompt] = useState('')
-  const [images, setImages] = useState<GeneratedImage[]>(() => createMockImages())
-  const [selectedImageId, setSelectedImageId] = useState<string | null>(
-    images[0]?.id ?? null,
+  const [images, setImages] = useState<GeneratedImage[]>([])
+  const [runId, setRunId] = useState<string | null>(null)
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false)
+  const [isLoadingLatest, setIsLoadingLatest] = useState(false)
+
+  const [videoPrompt, setVideoPrompt] = useState('')
+  const [videoResult, setVideoResult] = useState<VideoResult | null>(null)
+  const [videoError, setVideoError] = useState<string | null>(null)
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
+
+  const [progress, setProgress] = useState<VideoProgressSnapshot | null>(null)
+  const [isPollingProgress, setIsPollingProgress] = useState(false)
+
+  const selectedImage = useMemo(
+    () => images.find((image) => image.id === selectedImageId) ?? null,
+    [images, selectedImageId],
   )
-  const [videoDescription, setVideoDescription] = useState('')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [videoMessage, setVideoMessage] = useState<string>()
 
-  const selectedImageTitle = useMemo(() => {
-    return images.find((image) => image.id === selectedImageId)?.title ?? null
-  }, [images, selectedImageId])
+  const canGenerateImages = Boolean(sketchFile && prompt.trim().length > 0)
+  const canGenerateVideo = Boolean(selectedImage && (videoPrompt.trim().length > 0 || prompt.trim().length > 0))
 
-  const triggerMockGeneration = () => {
-    setIsGenerating(true)
-    setTimeout(() => {
-      const nextImages = createMockImages()
-      setImages(nextImages)
-      setSelectedImageId(nextImages[0]?.id ?? null)
-      setIsGenerating(false)
-    }, 700)
-  }
+  const handleSketchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    setSketchFile(file ?? null)
+    setSketchLabel(file ? file.name : 'No file chosen')
+  }, [])
 
-  const triggerLoadLatest = () => {
-    setIsGenerating(true)
-    setTimeout(() => {
-      const nextImages = createMockImages()
-      setImages(nextImages)
-      setSelectedImageId(nextImages[0]?.id ?? null)
-      setIsGenerating(false)
-    }, 500)
-  }
+  const handleGenerateImages = useCallback(async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!sketchFile || !prompt.trim()) {
+      setImageError('Upload a sketch and provide a prompt before generating images.')
+      return
+    }
 
-  const handleVideoSubmit = () => {
-    setIsSubmitting(true)
-    setVideoMessage('Submitting your prompt to Sora…')
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setVideoMessage('Video request received. Preview will appear when ready.')
-    }, 1000)
-  }
+    setImageError(null)
+    setIsGeneratingImages(true)
+    setVideoResult(null)
+    setProgress(null)
+    setSelectedImageId(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('prompt', prompt.trim())
+      formData.append('sketch', sketchFile)
+
+      const response = await fetch('/api/images/generate', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const message = await response.text()
+        throw new Error(message || 'Failed to generate images')
+      }
+
+      const payload = (await response.json()) as ImageGenerationResponse
+      setRunId(payload.runId)
+      setImages(payload.images)
+      setSelectedImageId(payload.images[0]?.id ?? null)
+      setVideoPrompt('')
+      setVideoError(null)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : 'Failed to generate images')
+    } finally {
+      setIsGeneratingImages(false)
+    }
+  }, [prompt, sketchFile])
+
+  const handleLoadLatest = useCallback(async () => {
+    setImageError(null)
+    setIsLoadingLatest(true)
+    try {
+      const response = await fetch('/api/images/latest', {
+        method: 'GET',
+        cache: 'no-store',
+      })
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('최근 생성된 이미지가 없습니다.')
+        }
+        const message = await response.text()
+        throw new Error(message || '이미지를 불러오지 못했습니다.')
+      }
+
+      const payload = (await response.json()) as LatestAssetsResponse
+      if (!payload.images?.length) {
+        throw new Error('최근 생성된 이미지가 없습니다.')
+      }
+
+      setRunId(payload.runId)
+      const mappedImages: GeneratedImage[] = payload.images.map((image, index) => ({
+        id: `${payload.runId}-latest-${index}`,
+        fileName: image.fileName,
+        url: image.url,
+        width: undefined,
+        height: undefined,
+        createdAt: image.updatedAt,
+        model: 'gpt-image-1-mini',
+        size: '1536x1024',
+      }))
+      setImages(mappedImages)
+      setSelectedImageId(mappedImages[0]?.id ?? null)
+      setVideoResult(null)
+      setProgress(null)
+      setVideoError(null)
+    } catch (err) {
+      setImageError(err instanceof Error ? err.message : '이미지를 불러오지 못했습니다.')
+    } finally {
+      setIsLoadingLatest(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isPollingProgress || !runId) {
+      return undefined
+    }
+
+    let isCancelled = false
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/outputs/${runId}/progress.json?ts=${Date.now()}`, {
+          cache: 'no-store',
+        })
+
+        if (!response.ok) {
+          if (response.status === 404) return
+          throw new Error('Unable to read progress')
+        }
+
+        const snapshot = (await response.json()) as VideoProgressSnapshot
+        if (!isCancelled) {
+          setProgress(snapshot)
+          if (snapshot.status === 'completed' || snapshot.status === 'failed') {
+            setIsPollingProgress(false)
+          }
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.warn('Progress polling failed', err)
+        }
+      }
+    }
+
+    poll()
+    const interval = setInterval(poll, PROGRESS_POLL_MS)
+    return () => {
+      isCancelled = true
+      clearInterval(interval)
+    }
+  }, [isPollingProgress, runId])
+
+  const handleGenerateVideo = useCallback(async () => {
+    if (!selectedImage || !runId) {
+      setVideoError('Select an image before requesting a video.')
+      return
+    }
+
+    const videoPromptValue = videoPrompt.trim() || prompt.trim()
+    if (!videoPromptValue) {
+      setVideoError('Provide guidance for the video prompt.')
+      return
+    }
+
+    setVideoError(null)
+    setVideoResult(null)
+    setProgress(null)
+    setIsGeneratingVideo(true)
+    setIsPollingProgress(true)
+
+    try {
+      const response = await fetch('/api/videos/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: videoPromptValue,
+          imageUrl: selectedImage.url,
+          runId,
+          size: '1280x720',
+          seconds: 8,
+        }),
+      })
+
+      if (!response.ok) {
+        const message = await response.text()
+        throw new Error(message || 'Video generation failed')
+      }
+
+      const payload = (await response.json()) as VideoGenerationResponse
+      setVideoResult(payload.video)
+      setProgress(payload.progress)
+    } catch (err) {
+      setVideoError(err instanceof Error ? err.message : 'Video generation failed')
+    } finally {
+      setIsGeneratingVideo(false)
+      setIsPollingProgress(false)
+    }
+  }, [prompt, selectedImage, videoPrompt, runId])
 
   return (
-    <div className='flex min-h-screen bg-zinc-100 text-zinc-900 dark:bg-black dark:text-zinc-50'>
-      <main className='mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-12 md:px-16'>
-        <header className='space-y-3'>
-          <p className='text-xs font-semibold uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500'>
-            Builder
-          </p>
-          <h1 className='text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50'>
-            Building Stories
-          </h1>
-          <p className='max-w-2xl text-sm text-zinc-500 dark:text-zinc-400'>
-            Create a sequence of illustrations from your sketches, then craft a
-            final video powered by Sora.
-          </p>
-        </header>
+    <div className='mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10 lg:px-10'>
+      <header className='space-y-3'>
+        <p className='text-xs font-semibold uppercase tracking-[0.3em] text-zinc-500'>Builder</p>
+        <h1 className='text-3xl font-semibold tracking-tight text-zinc-900'>Building Stories</h1>
+        <p className='max-w-2xl text-sm text-zinc-600'>
+          Upload a sketch, describe the scene, and let GPT Image and Sora craft your visual storyboard.
+        </p>
+      </header>
 
-        <UploadControls
-          fileName={fileName}
-          prompt={prompt}
-          onFileChange={(file) => setFileName(file?.name)}
-          onPromptChange={setPrompt}
-          onGenerateImages={triggerMockGeneration}
-          onLoadLatest={triggerLoadLatest}
-          isGenerating={isGenerating}
-        />
+      <section className='space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm'>
+        <form onSubmit={handleGenerateImages} className='space-y-4'>
+          <div className='grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2.1fr)_auto]'>
+            <label className='flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:border-zinc-300'>
+              <span>Upload sketch</span>
+              <input type='file' accept='image/*' onChange={handleSketchChange} className='hidden' />
+              <span className='truncate text-xs text-zinc-500'>{sketchLabel}</span>
+            </label>
+            <input
+              type='text'
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder='Describe your sketch...'
+              className='rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+            />
+            <div className='flex items-center gap-3'>
+              <button
+                type='submit'
+                disabled={!canGenerateImages || isGeneratingImages}
+                className='rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-300'
+              >
+                {isGeneratingImages ? 'Generating…' : 'Generate images'}
+              </button>
+              <button
+                type='button'
+                onClick={handleLoadLatest}
+                disabled={isGeneratingImages || isLoadingLatest}
+                className='rounded-lg border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-blue-400 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400'
+              >
+                {isLoadingLatest ? 'Loading…' : 'Load latest'}
+              </button>
+            </div>
+          </div>
+        </form>
+        {imageError ? <p className='text-sm text-red-500'>{imageError}</p> : null}
+      </section>
 
+      <section className='grid gap-6 lg:grid-cols-[2fr,1.2fr]'>
+        <ImageCarousel images={images} selectedId={selectedImageId} onSelect={(image) => setSelectedImageId(image.id)} />
         <div className='space-y-4'>
-          <GeneratedGallery
-            images={images}
-            selectedId={selectedImageId}
-            onSelect={setSelectedImageId}
-          />
-          {selectedImageTitle ? (
-            <p className='text-sm text-zinc-600 dark:text-zinc-400'>
-              Selected image: {selectedImageTitle}
-            </p>
+          <ImageGrid images={images} selectedId={selectedImageId} onSelect={(image) => setSelectedImageId(image.id)} />
+          {selectedImage ? (
+            <div className='rounded-lg border border-zinc-200 bg-white p-4 text-sm text-zinc-600 shadow-sm'>
+              <p className='font-medium text-zinc-900'>{selectedImage.fileName}</p>
+              <p className='text-xs text-zinc-500'>Model: {selectedImage.model} · Size: {selectedImage.size}</p>
+            </div>
           ) : null}
         </div>
+      </section>
 
-        <VideoRequestForm
-          description={videoDescription}
-          onDescriptionChange={setVideoDescription}
-          onSubmit={handleVideoSubmit}
-          isSubmitting={isSubmitting}
-        />
+      <section className='grid gap-6 lg:grid-cols-[1.5fr,1fr]'>
+        <div className='space-y-3 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm'>
+          <h2 className='text-lg font-semibold text-zinc-900'>Create a video with Sora</h2>
+          <p className='text-sm text-zinc-600'>Describe the motion or narrative for your final clip, then submit to Sora.</p>
+          <textarea
+            value={videoPrompt}
+            onChange={(event) => setVideoPrompt(event.target.value)}
+            placeholder='Describe the pacing, camera moves, and tone of the video...'
+            rows={4}
+            className='w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+          />
+          <div className='flex items-center gap-3'>
+            <button
+              type='button'
+              onClick={handleGenerateVideo}
+              disabled={!canGenerateVideo || isGeneratingVideo}
+              className='rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-300'
+            >
+              {isGeneratingVideo ? 'Submitting to Sora…' : 'Create video'}
+            </button>
+            <p className='text-sm text-zinc-500'>Target: 8s · 1280×720</p>
+          </div>
+          {videoError ? <p className='text-sm text-red-500'>{videoError}</p> : null}
+        </div>
 
-        <VideoPreview message={videoMessage} />
-      </main>
-
-      <aside className='hidden w-20 items-center justify-center bg-black text-white md:flex'>
-        <span className='-rotate-90 text-xs font-semibold tracking-[0.4em]'>
-          Builder
-        </span>
-      </aside>
+        <VideoPlaceholder progress={progress} videoUrl={videoResult?.url ?? null} isGenerating={isGeneratingVideo || isPollingProgress} />
+      </section>
     </div>
   )
 }

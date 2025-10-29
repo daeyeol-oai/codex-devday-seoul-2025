@@ -43,7 +43,17 @@
 - [x] Implement multipart handler that validates prompt and sketch inputs, saves uploads under `public/outputs/<runId>/`, and returns five-image metadata as JSON.
 - [x] Build latest assets endpoint that prioritizes `chosen/` directories, falls back to newest timestamped run, and returns image plus video URLs in a consistent JSON payload.
 - [x] Create video generation endpoint that validates JSON payload, records staged progress updates to `progress.json`, and emits the final 8-second video URL.
-- [ ] Deliver Codex SSE endpoint that streams plan/command/file-change/error events while enforcing workspace-write sandbox and git stash snapshots for undo. *(Mocked SSE events are in place; real Codex execution and undo safeguards remain TODO.)*
+- [x] Deliver Codex SSE endpoint that streams plan/command/file-change/error events while enforcing workspace-write sandbox and git stash snapshots for undo.
 - [x] Introduce singleton OpenAI and Codex SDK clients with early failure when `OPENAI_API_KEY` is missing.
-- [ ] Add filesystem safeguards so only `app/`, `styles/`, and `public/outputs/` are writable; ensure directory creation and path joins are pre-validated. *(Outputs guard exists; broader sandbox controls still pending.)*
+- [ ] Add filesystem safeguards so only `app/`, `styles/`, and `public/outputs/` are writable; ensure directory creation and path joins are pre-validated. *(Theme updates now use guarded paths; extend checks to broader Codex file edits.)*
 - [x] Document API request/response formats and local `.env` requirements once endpoints are in place.
+
+## 9. OpenAI Production Integration *(in progress)*
+- [x] Rename API routes to match final spec (`/api/images/generate`, `/api/images/latest`, `/api/videos/generate`, `/api/codex/{agent,theme,undo}`) and update front-end consumers.
+- [x] Replace image mock generator with OpenAI Images `gpt-image-1-mini` calls (5× portrait PNG) and persist decoded buffers under `public/outputs/<runId>/image-*.png`.
+- [x] Implement Sora `sora-2` video generation: preprocess selected image to 1280×720 via `sharp`, submit as `input_reference`, poll job status, stream progress into `progress.json`, and download the final MP4 to the run directory.
+- [x] Build front-end request flow in `app/page.tsx` to post multipart sketch + prompt, hydrate gallery state, handle selection and error feedback.
+- [x] Add progress polling UI (`VideoPlaceholder` and related components) that reads `progress.json` until the MP4 exists.
+- [x] Implement Codex agent/theme/undo endpoints using `@openai/codex-sdk`, enforce sandbox + git snapshot rules, and update `SidePanel` SSE client to render streamed events.
+- [ ] Ensure filesystem guardrails match allowlist requirements before enabling production model calls.
++ Later: add analytics/logging around model calls or production hardening (rate limits, retries, billing alerts) if needed.

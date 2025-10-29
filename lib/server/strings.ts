@@ -1,5 +1,3 @@
-'use server'
-
 export function sanitizeFileName(rawName: string, fallback = 'file') {
   const normalized = rawName.trim().toLowerCase()
   const safe = normalized.replace(/[^a-z0-9.\-_]/g, '-')

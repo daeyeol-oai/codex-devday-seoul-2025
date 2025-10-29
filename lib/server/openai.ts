@@ -1,5 +1,3 @@
-'use server'
-
 import OpenAI from 'openai'
 import { getEnv } from './env'
 

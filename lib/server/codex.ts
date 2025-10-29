@@ -1,6 +1,4 @@
-'use server'
-
-import { Codex } from '@openai/codex-sdk'
+import { Codex, type Thread, type ThreadOptions } from '@openai/codex-sdk'
 
 import { getEnv } from './env'
 
@@ -13,4 +11,13 @@ export function getCodexClient() {
     })
   }
   return client
+}
+
+export function startWorkspaceThread(options?: ThreadOptions): Thread {
+  const baseOptions: ThreadOptions = {
+    sandboxMode: 'workspace-write',
+    workingDirectory: process.cwd(),
+    ...options,
+  }
+  return getCodexClient().startThread(baseOptions)
 }

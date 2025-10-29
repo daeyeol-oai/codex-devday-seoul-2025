@@ -1,17 +1,17 @@
 # Backend API Contracts
 
-This project exposes mocked Node runtime API routes that mirror the structure of the production services. Requests and responses are JSON-serializable, so the same contracts can be reused once the OpenAI endpoints are wired up.
+The backend exposes Node runtime API routes that integrate directly with OpenAI Images (`gpt-image-1-mini`), Sora videos (`sora-2`), and the Codex SDK. Responses are JSON-serializable so the same contracts can be reused in production.
 
-> **Environment prerequisite**: All API handlers require `OPENAI_API_KEY` to be set (even in mock mode) so misconfigurations are surfaced early. The key should be stored in `.env.local` when running locally.
+> **Environment prerequisite**: set `OPENAI_API_KEY` in `.env.local` before starting the dev server. All endpoints throw if the key is missing.
 
-## `POST /api/images`
+## `POST /api/images/generate`
 
-Generates five mock image candidates for a sketch prompt. Accepts `multipart/form-data` with the following fields:
+Generates five portrait PNGs from a sketch reference and textual prompt. Accepts `multipart/form-data`:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `prompt` | text | ✅ | User-entered description of the sketch. Must be non-empty. |
-| `sketch` | file | ✅ | Reference sketch image. Converted to PNG using `sharp`. |
+| `prompt` | text | ✅ | Prompt forwarded to `gpt-image-1-mini`. |
+| `sketch` | file | ✅ | Sketch image; normalized to PNG for storage. |
 
 Successful response (`201`):
 
@@ -27,45 +27,46 @@ Successful response (`201`):
   "images": [
     {
       "id": "images-20241127041030-abc123-img-1",
-      "fileName": "image-1.svg",
-      "url": "/outputs/images-20241127041030-abc123/images/image-1.svg",
-      "backgroundColor": "#f2d6a0",
-      "accentColor": "#d68c45",
-      "title": "Quiet companion",
-      "description": "Mock illustration generated for prompt: Robot exploring a library",
-      "createdAt": "2024-11-27T04:10:30.120Z"
+      "fileName": "image-1.png",
+      "url": "/outputs/images-20241127041030-abc123/images/image-1.png",
+      "width": 1024,
+      "height": 1536,
+      "createdAt": "2024-11-27T04:10:30.120Z",
+      "model": "gpt-image-1-mini",
+      "size": "1536x1024"
     }
-  ]
+  ],
+  "model": "gpt-image-1-mini"
 }
 ```
 
-Validation errors return `400` with an `error` message (for example missing prompt or unsupported sketch format).
+All generated PNGs are written to `public/outputs/<runId>/images/`. Validation failures (missing prompt, invalid file) return `400` with `{ "error": "..." }`.
 
-## `GET /api/assets/latest`
+## `GET /api/images/latest`
 
-Scans `public/outputs/` for the most recent run. Priority:
+Discovers the most recent image/video run. Priority order:
 
 1. `public/outputs/chosen/`
-2. Most recently modified run directory
+2. Most recently modified run directory under `public/outputs/`
 
-Response (`200`):
+Successful response (`200`):
 
 ```json
 {
   "runId": "images-20241127041030-abc123",
   "images": [
     {
-      "fileName": "image-1.svg",
-      "url": "/outputs/images-20241127041030-abc123/images/image-1.svg",
-      "relativePath": "images-20241127041030-abc123/images/image-1.svg",
-      "updatedAt": "2024-11-27T04:10:30.200Z"
+      "fileName": "image-1.png",
+      "url": "/outputs/images-20241127041030-abc123/images/image-1.png",
+      "relativePath": "images-20241127041030-abc123/images/image-1.png",
+      "updatedAt": "2024-11-27T04:10:32.210Z"
     }
   ],
   "video": {
     "fileName": "video.mp4",
     "url": "/outputs/images-20241127041030-abc123/video.mp4",
     "relativePath": "images-20241127041030-abc123/video.mp4",
-    "updatedAt": "2024-11-27T04:10:36.000Z"
+    "updatedAt": "2024-11-27T04:15:12.000Z"
   },
   "progress": {
     "status": "completed",
@@ -74,75 +75,133 @@ Response (`200`):
 }
 ```
 
-If no runs are available the handler responds with `404`.
+If no runs exist the route returns `404`.
 
-## `POST /api/videos`
+## `POST /api/videos/generate`
 
-Mocks the Sora video-generation workflow. Expects JSON body:
+Creates an 8 second, 1280×720 video through Sora. Request body (`application/json`):
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `prompt` | string | ✅ | Description of the video request. |
-| `runId` | string | ✅* | If omitted, inferred from the first `imagePaths` entry. |
-| `imagePaths` | string[] | ✅ | Paths relative to `public/outputs/`, e.g. `images-20241127041030-abc123/images/image-1.svg`. All entries must map to the same run. |
-| `seconds` | number | optional | Defaults to 8 seconds. |
-| `size` | string | optional | Defaults to `720x1280`. |
+| `prompt` | string | ✅ | Prompt forwarded to `sora-2`. |
+| `imageUrl` | string | ✅ | `/outputs/...` URL of the selected image. |
+| `runId` | string | optional | Explicit run scope; inferred from `imageUrl` if omitted. |
+| `seconds` | number\|string | optional | Defaults to `8`. Accepts `4`, `8`, or `12`. |
+| `size` | string | optional | Defaults to `1280x720`. Must be a supported Sora size. |
 
-The handler copies a placeholder MP4 into the run directory, writes `progress.json`, and returns (`201`):
+Workflow:
+
+1. Selected image is resized to 1280×720 PNG (`public/outputs/<runId>/video/reference.png`).
+2. `openai.videos.create` submits the request to `sora-2`.
+3. The endpoint polls `openai.videos.retrieve` until completion (or failure) updating `progress.json` on each step.
+4. Final media is downloaded via `openai.videos.downloadContent` into `public/outputs/<runId>/video.mp4`.
+
+Successful response (`201`):
 
 ```json
 {
   "runId": "images-20241127041030-abc123",
   "prompt": "Compile selected frames into a teaser",
-  "seconds": 8,
-  "size": "720x1280",
+  "seconds": "8",
+  "size": "1280x720",
   "video": {
     "url": "/outputs/images-20241127041030-abc123/video.mp4",
-    "fileName": "video.mp4"
+    "fileName": "video.mp4",
+    "id": "video_456"
   },
   "progress": {
+    "runId": "images-20241127041030-abc123",
+    "prompt": "Compile selected frames into a teaser",
+    "model": "sora-2",
+    "videoId": "video_456",
     "status": "completed",
     "progress": 100,
-    "steps": [
+    "seconds": "8",
+    "size": "1280x720",
+    "startedAt": "2024-11-27T04:10:30.300Z",
+    "updatedAt": "2024-11-27T04:15:12.000Z",
+    "history": [
       {
         "status": "queued",
         "progress": 5,
-        "message": "Queued Sora render job",
         "timestamp": "2024-11-27T04:10:30.300Z"
+      },
+      {
+        "status": "in_progress",
+        "progress": 45,
+        "timestamp": "2024-11-27T04:10:32.306Z"
+      },
+      {
+        "status": "completed",
+        "progress": 100,
+        "timestamp": "2024-11-27T04:15:12.000Z"
       }
     ],
     "assets": {
       "video": "/outputs/images-20241127041030-abc123/video.mp4",
-      "images": [
-        "/outputs/images-20241127041030-abc123/images/image-1.svg"
-      ]
+      "reference": "/outputs/images-20241127041030-abc123/video/reference.png",
+      "images": ["/outputs/images-20241127041030-abc123/images/image-1.png"]
     }
   }
 }
 ```
 
-Invalid image references or missing prompts produce `400` responses. Server misconfiguration (for example missing placeholder video) returns `500`.
+Errors:
 
-## `POST /api/codex`
+- missing prompt or image ⇒ `400`
+- invalid local path ⇒ `400`
+- Sora failures ⇒ `502` with the upstream error message
+- timeout ⇒ `504`
 
-Streams mocked Server-Sent Events representing Codex activity. Supported actions:
+Once the request begins, progress updates are written to `public/outputs/<runId>/progress.json` so the UI can poll independently.
 
-- `{"action":"run","prompt":"..."}` – emits plan/command/file-change/message events and completes the turn.
-- `{"action":"theme","theme":{"primary":"#111","accent":"#f87171"}}` – acknowledges theme updates.
-- `{"action":"undo"}` – indicates the latest snapshot has been restored.
+## `POST /api/codex/agent`
 
-Responses use `text/event-stream`. Example event payload:
+Starts a Codex thread and streams events over SSE (`text/event-stream`). Request body:
 
+```json
+{ "prompt": "Diagnose the failing lint step and propose a fix" }
 ```
-event: plan.created
-data: {"items":[{"id":"mock-thread-abc-step-1","title":"Inspect project context","status":"completed"}]}
+
+Event stream includes (non-exhaustive):
+
+- `snapshot.recorded` — indicates a git snapshot was attempted.
+- `thread.started`
+- `plan.updated` — todo list items with completion state.
+- `command.started` / `command.updated` / `command.completed`
+- `file.change` — list of touched files and change kinds.
+- `message` / `reasoning`
+- `turn.completed` (token usage) / `turn.failed`
+- `error` — unrecoverable errors
+- `done` — stream finished
+
+Clients should parse SSE lines (`event:` / `data:`) and update UI incrementally. The thread runs with sandbox mode `workspace-write` rooted at the repository.
+
+## `POST /api/codex/theme`
+
+Applies a theme override by rewriting `styles/theme.css`. Request body:
+
+```json
+{ "primary": "#2563eb", "accent": "#38bdf8" }
 ```
 
-In the real integration this endpoint will proxy the `@openai/codex-sdk` streaming events while enforcing the same SSE schema.
+Only hex colours are accepted. The endpoint returns:
+
+```json
+{ "applied": true, "theme": { "primary": "#2563eb", "accent": "#38bdf8" }, "snapshotCreated": true }
+```
+
+## `POST /api/codex/undo`
+
+Attempts to restore the latest git snapshot created by the agent/theme routes.
+
+- Success ⇒ `200 { "restored": true }`
+- No snapshot ⇒ `409 { "restored": false, "reason": "..." }`
+- Git errors ⇒ `500 { "error": "..." }`
 
 ## Local Verification
 
-- Set `OPENAI_API_KEY` in `.env.local` (mock mode still checks for it).
-- `npm run lint` validates TypeScript types and ESLint rules.
-- Inspect generated assets under `public/outputs/<runId>/` to confirm mock files are written correctly.
-
+- `npm run lint` – typecheck and lint.
+- Inspect `public/outputs/<runId>/` for generated PNGs, `progress.json`, and `video.mp4`.
+- Use `curl -N -X POST http://localhost:3000/api/codex/agent -H 'Content-Type: application/json' -d '{"prompt":"..."}'` to inspect raw SSE output.
+- `git stash list` will reflect snapshots recorded by the Codex endpoints.

@@ -1,0 +1,17 @@
+:root {
+  --panel-background: #0f172a;
+  --panel-foreground: #f8fafc;
+  --panel-muted: #94a3b8;
+  --panel-border: rgba(148, 163, 184, 0.2);
+  --accent-primary: #2563eb;
+  --accent-secondary: #38bdf8;
+}
+
+body[data-theme='builder-dark'] {
+  --panel-background: #020817;
+  --panel-foreground: #e2e8f0;
+  --panel-muted: #94a3b8;
+  --panel-border: rgba(148, 163, 184, 0.12);
+  --accent-primary: #5b21b6;
+  --accent-secondary: #f472b6;
+}
