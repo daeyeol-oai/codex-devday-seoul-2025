@@ -13,12 +13,13 @@ export type ImageGenerationResponse = {
   runId: string
   createdAt: string
   prompt: string
-  sketch: {
+  sketch?: {
     fileName: string
-    url: string
-  }
+    url: string | null
+  } | null
   images: GeneratedImage[]
   model: string
+  usedReference: boolean
 }
 
 export type LatestAssetsResponse = {
@@ -36,6 +37,10 @@ export type LatestAssetsResponse = {
     updatedAt: string
   } | null
   progress?: Record<string, unknown> | null
+  metadata?: {
+    prompt?: string
+    usedReference?: boolean
+  } | null
 }
 
 export type VideoProgressStatus = 'queued' | 'in_progress' | 'completed' | 'failed'

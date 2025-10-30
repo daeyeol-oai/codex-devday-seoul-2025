@@ -66,3 +66,10 @@
 - [ ] **Abort support**: Add an API or SSE signal so the SidePanel’s “중단” 버튼 can cancel an in-flight Codex run.
 - [x] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
 - [ ] **Snapshot clean-up**: Track active snapshots and auto-drop stale ones, preventing the stash stack from growing without bounds.
+
+## 11. Image Generation Enhancements *(completed)*
+- [x] Update the UI flow so `Generate images` works with text-only prompts, making the sketch upload optional while keeping prompt input mandatory.
+- [x] Extend `/api/images/generate` to detect when a sketch is present; encode it and call OpenAI Images with `image` + `prompt`. For text-only requests, keep the current prompt-based generation.
+- [x] Store and surface whether a run used a reference image so the gallery can display context (e.g., “from sketch” badges if needed).
+- [x] Add error messaging for unsupported sketch formats and ensure text-only mode still returns informative errors.
+- [x] Document the optional reference workflow in `docs/backend-api.md` and `agents.md` so future maintainers know how inputs are forwarded to OpenAI.

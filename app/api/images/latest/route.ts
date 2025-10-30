@@ -27,6 +27,7 @@ type LatestAssetsResponse = {
   images: AssetDescriptor[]
   video: AssetDescriptor | null
   progress?: Record<string, unknown> | null
+  metadata?: Record<string, unknown> | null
 }
 
 async function collectFiles(basePath: string, extensions: Set<string>) {
@@ -82,6 +83,7 @@ async function loadRunAssets(runId: string, absolutePath: string): Promise<Lates
   const video = videoAssets.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0] ?? null
 
   const progress = await readProgress(absolutePath)
+  const metadata = await readMetadata(absolutePath)
 
   if (fallbackImages.length === 0 && !video && !progress) {
     return null
@@ -92,6 +94,7 @@ async function loadRunAssets(runId: string, absolutePath: string): Promise<Lates
     images: fallbackImages,
     video,
     progress,
+    metadata,
   }
 }
 
@@ -107,6 +110,23 @@ async function getChosenRun(): Promise<LatestAssetsResponse | null> {
   }
 
   return loadRunAssets('chosen', chosenPath)
+}
+
+async function readMetadata(basePath: string) {
+  const metadataPath = path.join(basePath, 'metadata.json')
+  try {
+    const raw = await fs.readFile(metadataPath, 'utf8')
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    return {
+      prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+      usedReference: Boolean((parsed as { usedReference?: unknown }).usedReference),
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null
+    }
+    throw err
+  }
 }
 
 function sortRunsByModified(runs: Awaited<ReturnType<typeof listRuns>>, exclude: string[]) {

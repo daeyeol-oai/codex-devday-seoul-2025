@@ -35,13 +35,14 @@ export default function HomePage() {
 
   const [progress, setProgress] = useState<VideoProgressSnapshot | null>(null)
   const [isPollingProgress, setIsPollingProgress] = useState(false)
+  const [usedReference, setUsedReference] = useState(false)
 
   const selectedImage = useMemo(
     () => images.find((image) => image.id === selectedImageId) ?? null,
     [images, selectedImageId],
   )
 
-  const canGenerateImages = Boolean(sketchFile && prompt.trim().length > 0)
+  const canGenerateImages = prompt.trim().length > 0
   const canGenerateVideo = Boolean(selectedImage && (videoPrompt.trim().length > 0 || prompt.trim().length > 0))
 
   const handleSketchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,8 +53,8 @@ export default function HomePage() {
 
   const handleGenerateImages = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!sketchFile || !prompt.trim()) {
-      setImageError('Upload a sketch and provide a prompt before generating images.')
+    if (!prompt.trim()) {
+      setImageError('프롬프트를 입력해주세요.')
       return
     }
 
@@ -66,7 +67,9 @@ export default function HomePage() {
     try {
       const formData = new FormData()
       formData.append('prompt', prompt.trim())
-      formData.append('sketch', sketchFile)
+      if (sketchFile) {
+        formData.append('sketch', sketchFile)
+      }
 
       const response = await fetch('/api/images/generate', {
         method: 'POST',
@@ -84,6 +87,11 @@ export default function HomePage() {
       setSelectedImageId(payload.images[0]?.id ?? null)
       setVideoPrompt('')
       setVideoError(null)
+      setUsedReference(Boolean(payload.usedReference))
+      if (!payload.usedReference) {
+        setSketchFile(null)
+        setSketchLabel('No file chosen')
+      }
     } catch (err) {
       setImageError(err instanceof Error ? err.message : 'Failed to generate images')
     } finally {
@@ -129,6 +137,7 @@ export default function HomePage() {
       setVideoResult(null)
       setProgress(null)
       setVideoError(null)
+      setUsedReference(Boolean(payload.metadata?.usedReference))
     } catch (err) {
       setImageError(err instanceof Error ? err.message : '이미지를 불러오지 못했습니다.')
     } finally {
@@ -239,7 +248,7 @@ export default function HomePage() {
         <form onSubmit={handleGenerateImages} className='space-y-4'>
           <div className='grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2.1fr)_auto]'>
             <label className='flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:border-zinc-300'>
-              <span>Upload sketch</span>
+              <span>Upload sketch (optional)</span>
               <input type='file' accept='image/*' onChange={handleSketchChange} className='hidden' />
               <span className='truncate text-xs text-zinc-500'>{sketchLabel}</span>
             </label>
@@ -270,6 +279,11 @@ export default function HomePage() {
           </div>
         </form>
         {imageError ? <p className='text-sm text-red-500'>{imageError}</p> : null}
+        {images.length ? (
+          <p className='text-xs text-zinc-500'>
+            {usedReference ? 'Reference sketch applied to this run.' : 'Generated from prompt only.'}
+          </p>
+        ) : null}
       </section>
 
       <section className='grid gap-6 lg:grid-cols-[2fr,1.2fr]'>

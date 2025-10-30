@@ -6,12 +6,12 @@ The backend exposes Node runtime API routes that integrate directly with OpenAI 
 
 ## `POST /api/images/generate`
 
-Generates five portrait PNGs from a sketch reference and textual prompt. Accepts `multipart/form-data`:
+Generates five landscape PNGs from a textual prompt. You may optionally attach a sketch reference that is forwarded to the OpenAI Images edit endpoint. Accepts `multipart/form-data`:
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `prompt` | text | ✅ | Prompt forwarded to `gpt-image-1-mini`. |
-| `sketch` | file | ✅ | Sketch image; normalized to PNG for storage. |
+| `sketch` | file | optional | Optional reference sketch; normalized to PNG and supplied as `image` when present. |
 
 Successful response (`201`):
 
@@ -29,18 +29,17 @@ Successful response (`201`):
       "id": "images-20241127041030-abc123-img-1",
       "fileName": "image-1.png",
       "url": "/outputs/images-20241127041030-abc123/images/image-1.png",
-      "width": 1024,
-      "height": 1536,
       "createdAt": "2024-11-27T04:10:30.120Z",
       "model": "gpt-image-1-mini",
       "size": "1536x1024"
     }
   ],
-  "model": "gpt-image-1-mini"
+  "model": "gpt-image-1-mini",
+  "usedReference": true
 }
 ```
 
-All generated PNGs are written to `public/outputs/<runId>/images/`. Validation failures (missing prompt, invalid file) return `400` with `{ "error": "..." }`.
+All generated PNGs are written to `public/outputs/<runId>/images/`. Validation failures (missing prompt or unsupported reference image) return `400` with `{ "error": "..." }`. The response includes `usedReference: true` when a sketch was supplied.
 
 ## `GET /api/images/latest`
 
@@ -163,19 +162,17 @@ Starts a Codex thread and streams events over SSE (`text/event-stream`). Request
 { "prompt": "Diagnose the failing lint step and propose a fix" }
 ```
 
-Event stream includes (non-exhaustive):
+Each SSE payload uses `event: message` and a JSON body `{ "type": string, "text"?: string, "payload"?: object }`. Examples include:
 
-- `snapshot.recorded` — indicates a git snapshot was attempted.
-- `thread.started`
-- `plan.updated` — todo list items with completion state.
-- `command.started` / `command.updated` / `command.completed`
-- `file.change` — list of touched files and change kinds.
-- `message` / `reasoning`
-- `turn.completed` (token usage) / `turn.failed`
-- `error` — unrecoverable errors
-- `done` — stream finished
+- `type: "thread.started"` — Codex thread ID.
+- `type: "plan.updated"` — todo list items (`payload.items`).
+- `type: "command.started" | "command.updated" | "command.completed"` — command lines, status, output.
+- `type: "file.change"` — changed file list.
+- `type: "agent.message"`, `type: "reasoning"` — natural language responses/thoughts.
+- `type: "error"` — non-recoverable issues; UI should mark the run as failed.
+- `type: "turn.completed"` — token usage summary.
 
-Clients should parse SSE lines (`event:` / `data:`) and update UI incrementally. The thread runs with sandbox mode `workspace-write` rooted at the repository.
+When execution finishes the stream emits `event: done` with `{ "ok": true }` on success or `{ "ok": false }` on failure and then closes. Clients should parse SSE lines (`event:`/`data:`) in order and update the UI incrementally. The thread runs with sandbox mode `workspace-write` rooted at the repository.
 
 ## `POST /api/codex/theme`
 
@@ -188,16 +185,16 @@ Applies a theme override by rewriting `styles/theme.css`. Request body:
 Only hex colours are accepted. The endpoint returns:
 
 ```json
-{ "applied": true, "theme": { "primary": "#2563eb", "accent": "#38bdf8" }, "snapshotCreated": true }
+{ "ok": true, "theme": { "primary": "#2563eb", "accent": "#38bdf8" }, "snapshotCreated": true }
 ```
 
 ## `POST /api/codex/undo`
 
 Attempts to restore the latest git snapshot created by the agent/theme routes.
 
-- Success ⇒ `200 { "restored": true }`
-- No snapshot ⇒ `409 { "restored": false, "reason": "..." }`
-- Git errors ⇒ `500 { "error": "..." }`
+- Success ⇒ `200 { "ok": true }`
+- No snapshot ⇒ `409 { "ok": false, "reason": "..." }`
+- Git errors ⇒ `500 { "ok": false, "error": "..." }`
 
 ## Local Verification
 

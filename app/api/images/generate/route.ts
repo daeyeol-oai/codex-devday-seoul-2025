@@ -6,6 +6,7 @@ import { createRunId, ensureRunDirectory, writeFileInRun } from '@/lib/server/st
 import { sanitizeFileName } from '@/lib/server/strings'
 import { logError, logInfo } from '@/lib/server/logger'
 import { getOpenAIClient } from '@/lib/server/openai'
+import { toFile } from 'openai'
 
 export const runtime = 'nodejs'
 
@@ -28,12 +29,13 @@ type ImageResponse = {
   runId: string
   createdAt: string
   prompt: string
-  sketch: {
+  sketch?: {
     fileName: string
-    url: string
-  }
+    url: string | null
+  } | null
   images: GeneratedImagePayload[]
   model: string
+  usedReference: boolean
 }
 
 function ensureFileName(baseName: string) {
@@ -59,41 +61,56 @@ export async function POST(request: NextRequest) {
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return error(400, 'Prompt is required')
     }
-
-    if (!(sketch instanceof File)) {
-      return error(400, 'Sketch file is required')
-    }
+    const hasSketch = sketch instanceof File && sketch.size > 0
 
     const promptValue = prompt.trim()
     const runId = createRunId('images')
     await ensureRunDirectory(runId)
 
-    let normalizedSketch: Buffer
-    try {
-      normalizedSketch = await normaliseSketch(sketch)
-    } catch (conversionError) {
-      logError('Sketch normalization failed', conversionError)
-      return error(400, 'Uploaded sketch must be a supported image format')
-    }
+    let normalizedSketch: Buffer | null = null
+    let sketchFileName: string | null = null
+    let sketchRelativePath: string | null = null
 
-    const sketchFileName = `${ensureFileName(sketch.name || 'sketch.png')}.png`
-    const sketchRelativePath = `input/${sketchFileName}`
-    await writeFileInRun(runId, sketchRelativePath, normalizedSketch)
+    if (hasSketch) {
+      try {
+        normalizedSketch = await normaliseSketch(sketch as File)
+        sketchFileName = `${ensureFileName((sketch as File).name || 'sketch.png')}.png`
+        sketchRelativePath = `input/${sketchFileName}`
+        await writeFileInRun(runId, sketchRelativePath, normalizedSketch)
+      } catch (conversionError) {
+        logError('Sketch normalization failed', conversionError)
+        return error(400, 'Uploaded sketch must be a supported image format')
+      }
+    }
 
     const createdAt = new Date().toISOString()
 
     let imagesResponse
     const client = getOpenAIClient()
     try {
-      imagesResponse = await client.images.generate({
-        model: IMAGE_MODEL,
-        prompt: promptValue,
-        n: IMAGE_COUNT,
-        size: IMAGE_SIZE,
-        output_format: 'png',
-      })
+      if (hasSketch && normalizedSketch) {
+        const referenceFile = await toFile(normalizedSketch, sketchFileName ?? 'sketch.png', {
+          type: 'image/png',
+        })
+        imagesResponse = await client.images.edit({
+          model: IMAGE_MODEL,
+          image: referenceFile,
+          prompt: promptValue,
+          n: IMAGE_COUNT,
+          size: IMAGE_SIZE,
+          output_format: 'png',
+        })
+      } else {
+        imagesResponse = await client.images.generate({
+          model: IMAGE_MODEL,
+          prompt: promptValue,
+          n: IMAGE_COUNT,
+          size: IMAGE_SIZE,
+          output_format: 'png',
+        })
+      }
     } catch (apiError) {
-      logError('OpenAI image generation failed', apiError, { runId })
+      logError('OpenAI image generation failed', apiError, { runId, usedReference: hasSketch })
       return error(502, 'Image generation request failed')
     }
 
@@ -142,12 +159,15 @@ export async function POST(request: NextRequest) {
       runId,
       createdAt,
       prompt: promptValue,
-      sketch: {
-        fileName: sketchFileName,
-        url: `/outputs/${runId}/${sketchRelativePath}`,
-      },
+      sketch: hasSketch
+        ? {
+            fileName: sketchFileName!,
+            url: sketchRelativePath ? `/outputs/${runId}/${sketchRelativePath}` : null,
+          }
+        : null,
       images,
       model: IMAGE_MODEL,
+      usedReference: hasSketch,
     }
 
     await writeMetadata(runId, response)

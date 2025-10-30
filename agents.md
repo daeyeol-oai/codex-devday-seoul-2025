@@ -24,3 +24,7 @@ Write commits in the imperative mood (`Add landing hero layout`) and keep them s
 - Codex runs within `workspace-write` sandbox mode confined to the repository root. No automatic git snapshot is created at turn start; snapshots are deferred to the edit-application phase (planned in `plan.md` section 10).
 - `/api/codex/theme` and `/api/codex/undo` now return `{ ok: true/false, ... }` so the UI can provide consistent feedback.
 - Further hardening tasks—edit verification, abort handling, snapshot cleanup—are tracked under “Codex Workflow Hardening” in `plan.md` and should be referenced before extending the agent.
+
+## Image Generation Notes
+- `/api/images/generate` accepts text-only prompts and an optional sketch. When supplied, the sketch is normalized to PNG and passed to the OpenAI Images edit endpoint; otherwise the prompt is sent to `images.generate`.
+- Responses include `usedReference` so the UI can indicate whether a run used a sketch. `metadata.json` mirrors this flag for the latest-assets endpoint.
