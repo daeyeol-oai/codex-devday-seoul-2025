@@ -71,6 +71,8 @@
 - [x] **Snapshot availability**: Expose an endpoint to report stored Codex snapshots and initialise the Undo button state accordingly.
 - [x] **Theme snapshot timing**: Adjust theme API flow so snapshots are created after writes, guaranteeing undo availability even from a clean workspace.
 - [x] **Snapshot prune**: Automatically drop stale `.codex-snapshots.json` entries when git stashes are missing and continue undo with the next available snapshot.
+- [x] **Codex-driven theme edits**: Route Apply Theme requests through a Codex plan so CSS rewrites happen via the agent under sandbox controls.
+- [x] **Codex SSE wiring**: Stream Codex theme run progress back into the SidePanel UI, showing plan/command output during theme updates.
 
 ## 11. Image Generation Enhancements *(completed)*
 - [x] Update the UI flow so `Generate images` works with text-only prompts, making the sketch upload optional while keeping prompt input mandatory.

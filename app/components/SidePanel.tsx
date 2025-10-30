@@ -126,6 +126,7 @@ export default function SidePanel() {
   const [accent, setAccent] = useState(DEFAULT_ACCENT)
   const [themeMessage, setThemeMessage] = useState<string | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
+  const [isThemeRunning, setIsThemeRunning] = useState(false)
 
   const refreshSnapshotAvailability = useCallback(async () => {
     try {
@@ -351,27 +352,94 @@ export default function SidePanel() {
   }, [refreshSnapshotAvailability])
 
   const applyTheme = useCallback(async () => {
+    if (!primary.trim() || !accent.trim()) {
+      setThemeMessage('Select both colours before applying.')
+      return
+    }
+
+    controllerRef.current?.abort()
+    const controller = new AbortController()
+    controllerRef.current = controller
+
+    resetState()
     setThemeMessage('Applying theme…')
+    setIsThemeRunning(true)
+
+    let donePayload: Record<string, unknown> | null = null
+
     try {
       const response = await fetch('/api/codex/theme', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ primary, accent }),
+        body: JSON.stringify({ primary: primary.trim(), accent: accent.trim() }),
+        signal: controller.signal,
       })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok || !data.ok) {
-        const message = typeof data.error === 'string' ? data.error : undefined
-        throw new Error(message || 'Failed to apply theme')
+
+      if (!response.ok || !response.body) {
+        const message = await response.text().catch(() => '')
+        throw new Error(message || 'Failed to start theme update')
       }
-      setThemeMessage('Theme updated.')
-      setSnapshotAvailable(Boolean(data.snapshotCreated ?? data.hasSnapshots))
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      const emit = (event: string, data: unknown) => {
+        handleEvent(event, data)
+        if (event === 'message') {
+          const record = asRecord(data)
+          if (record?.type === 'theme.completed') {
+            const details = asRecord(record.payload)
+            if (details && typeof details.hasSnapshots === 'boolean') {
+              setSnapshotAvailable(Boolean(details.hasSnapshots))
+            }
+          }
+        }
+        if (event === 'done') {
+          donePayload = asRecord(data)
+        }
+      }
+
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        buffer = parseSseChunk(buffer, emit)
+      }
+
+      if (buffer.length > 0) {
+        parseSseChunk(buffer, emit)
+      }
+
+      if (donePayload && donePayload.ok === false) {
+        const message = typeof donePayload.error === 'string' ? donePayload.error : 'Codex theme update failed'
+        throw new Error(message)
+      }
+
+      if (donePayload && typeof donePayload.hasSnapshots === 'boolean') {
+        setSnapshotAvailable(Boolean(donePayload.hasSnapshots))
+      }
+
+      if (donePayload && donePayload.reason === 'no_changes') {
+        setThemeMessage('Colours already up to date.')
+      } else {
+        setThemeMessage('Theme updated.')
+      }
+
       await refreshSnapshotAvailability()
     } catch (err) {
-      setThemeMessage(err instanceof Error ? err.message : 'Failed to apply theme')
+      if (controller.signal.aborted) {
+        setThemeMessage('Theme update cancelled.')
+      } else {
+        setThemeMessage(err instanceof Error ? err.message : 'Failed to apply theme')
+      }
+    } finally {
+      setIsThemeRunning(false)
+      controllerRef.current = null
     }
-  }, [accent, primary, refreshSnapshotAvailability])
+  }, [accent, handleEvent, primary, refreshSnapshotAvailability, resetState])
 
   const undoSnapshot = useCallback(async () => {
     setUndoMessage('Restoring snapshot…')
@@ -547,9 +615,10 @@ export default function SidePanel() {
               <button
                 type='button'
                 onClick={applyTheme}
-                className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)]'
+                disabled={isThemeRunning}
+                className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-[10px] uppercase tracking-wide text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
               >
-                Apply theme
+                {isThemeRunning ? 'Updating…' : 'Apply theme'}
               </button>
               {themeMessage ? <span className='text-[10px] text-[var(--panel-muted)]'>{themeMessage}</span> : null}
             </div>
