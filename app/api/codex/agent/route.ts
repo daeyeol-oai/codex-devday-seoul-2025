@@ -197,7 +197,7 @@ function parsePayload(body: unknown): RunPayload {
 export async function POST(request: NextRequest) {
   try {
     const payload = parsePayload(await request.json())
-    const snapshotLabel = await createSnapshot('agent-run')
+    let snapshotLabel = await createSnapshot('agent-run')
     const thread = startWorkspaceThread()
 
     const stream = new ReadableStream<Uint8Array>({
@@ -224,8 +224,12 @@ export async function POST(request: NextRequest) {
             forwardEvent(emitter, event)
           }
           if (!emitter.isClosed()) {
-            if (snapshotLabel && !hasFileChanges) {
+            if (!hasFileChanges && snapshotLabel) {
               await dropSnapshot(snapshotLabel)
+              snapshotLabel = null
+            }
+            if (hasFileChanges && !snapshotLabel) {
+              snapshotLabel = await createSnapshot('agent-run')
             }
             const summary = await getSnapshotSummary()
             emitter.send('done', { ok: true, hasSnapshots: summary.hasSnapshots })
@@ -244,8 +248,12 @@ export async function POST(request: NextRequest) {
                   ? { name: streamError.name, stack: streamError.stack }
                   : undefined,
             })
-            if (snapshotLabel && !hasFileChanges) {
+            if (!hasFileChanges && snapshotLabel) {
               await dropSnapshot(snapshotLabel)
+              snapshotLabel = null
+            }
+            if (hasFileChanges && !snapshotLabel) {
+              snapshotLabel = await createSnapshot('agent-run')
             }
             const summary = await getSnapshotSummary()
             emitter.send('done', {
