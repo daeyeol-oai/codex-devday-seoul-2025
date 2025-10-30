@@ -41,7 +41,12 @@ async function workspaceHasChanges() {
   return stdout.trim().length > 0
 }
 
-async function listStashEntries() {
+type StashEntry = {
+  ref: string
+  label: string
+}
+
+async function listStashEntries(): Promise<StashEntry[]> {
   const { stdout } = await execFile('git', ['stash', 'list', '--format=%gd::%gs'], {
     cwd: WORKSPACE_ROOT,
   })
@@ -81,6 +86,15 @@ function extractPathsFromPatch(patch: string) {
   return Array.from(paths)
 }
 
+async function filterSnapshotStack(stack: string[]) {
+  const entries = await listStashEntries()
+  const filtered = stack.filter((label) => entries.some((entry) => entry.label.includes(label)))
+  if (filtered.length !== stack.length) {
+    await writeSnapshotStack(filtered)
+  }
+  return { filtered, entries }
+}
+
 export async function createSnapshot(label: string) {
   if (!(await ensureGitRepo())) {
     return null
@@ -112,69 +126,77 @@ export async function applyLatestSnapshot() {
     return { applied: false, reason: 'Repository not initialised' }
   }
 
-  const stack = await readSnapshotStack()
-  const snapshotLabel = stack.pop()
-  if (!snapshotLabel) {
-    return { applied: false, reason: 'No snapshots available' }
-  }
+  let stack = await readSnapshotStack()
+  const initial = await filterSnapshotStack(stack)
+  stack = initial.filtered
+  let entries = initial.entries
 
-  const entries = await listStashEntries()
-  const target = entries.find((entry) => entry.label === snapshotLabel)
-  if (!target) {
-    await writeSnapshotStack(stack)
-    return { applied: false, reason: 'Snapshot expired or already applied' }
-  }
-
-  const targetPatch = await getPatchForRef(target.ref)
-  const targetPaths = extractPathsFromPatch(targetPatch)
-  try {
-    await execFile('git', ['stash', 'drop', target.ref], { cwd: WORKSPACE_ROOT })
-  } catch (err) {
-    await writeSnapshotStack(stack)
-    throw err
-  }
-
-  await writeSnapshotStack(stack)
-
-  if (stack.length === 0) {
-    if (targetPaths.length > 0) {
-      await execFile('git', ['checkout', '--', ...targetPaths], { cwd: WORKSPACE_ROOT })
+  while (stack.length > 0) {
+    const snapshotLabel = stack.pop()!
+    const target = entries.find((entry) => entry.label.includes(snapshotLabel))
+    if (!target) {
+      continue
     }
-    return { applied: true, remaining: 0 }
-  }
 
-  const remainingEntries = await listStashEntries()
-  const latestLabel = stack[stack.length - 1]
-  const latest = remainingEntries.find((entry) => entry.label === latestLabel)
-  if (!latest) {
+    const targetPatch = await getPatchForRef(target.ref)
+    const targetPaths = extractPathsFromPatch(targetPatch)
+    try {
+      await execFile('git', ['stash', 'drop', target.ref], { cwd: WORKSPACE_ROOT })
+    } catch (err) {
+      stack.push(snapshotLabel)
+      await writeSnapshotStack(stack)
+      throw err
+    }
+
+    await writeSnapshotStack(stack)
+
+    if (stack.length === 0) {
+      if (targetPaths.length > 0) {
+        await execFile('git', ['checkout', '--', ...targetPaths], { cwd: WORKSPACE_ROOT })
+      }
+      return { applied: true, remaining: 0 }
+    }
+
+    const next = await filterSnapshotStack(stack)
+    stack = next.filtered
+    entries = next.entries
+
+    const latestLabel = stack[stack.length - 1]
+    const latest = entries.find((entry) => entry.label.includes(latestLabel))
+    if (!latest) {
+      return { applied: true, remaining: stack.length }
+    }
+
+    const latestPatch = await getPatchForRef(latest.ref)
+    const latestPaths = extractPathsFromPatch(latestPatch)
+    if (latestPaths.length > 0) {
+      await execFile('git', ['checkout', '--', ...latestPaths], { cwd: WORKSPACE_ROOT })
+    }
+
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-patch-'))
+    const patchPath = path.join(tmpDir, 'snapshot.patch')
+    try {
+      await fs.writeFile(patchPath, latestPatch, 'utf8')
+      await execFile('git', ['apply', '--whitespace=nowarn', patchPath], { cwd: WORKSPACE_ROOT })
+    } catch (err) {
+      throw err
+    } finally {
+      await fs.rm(patchPath, { force: true }).catch(() => {})
+      await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
+    }
+
     return { applied: true, remaining: stack.length }
   }
 
-  const latestPatch = await getPatchForRef(latest.ref)
-  const latestPaths = extractPathsFromPatch(latestPatch)
-  if (latestPaths.length > 0) {
-    await execFile('git', ['checkout', '--', ...latestPaths], { cwd: WORKSPACE_ROOT })
-  }
-
-  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-patch-'))
-  const patchPath = path.join(tmpDir, 'snapshot.patch')
-  try {
-    await fs.writeFile(patchPath, latestPatch, 'utf8')
-    await execFile('git', ['apply', '--whitespace=nowarn', patchPath], { cwd: WORKSPACE_ROOT })
-  } catch (err) {
-    throw err
-  } finally {
-    await fs.rm(patchPath, { force: true }).catch(() => {})
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
-  }
-
-  return { applied: true, remaining: stack.length }
+  await writeSnapshotStack(stack)
+  return { applied: false, reason: 'No snapshots available' }
 }
 
 export async function getSnapshotSummary() {
   const stack = await readSnapshotStack()
+  const { filtered } = await filterSnapshotStack(stack)
   return {
-    hasSnapshots: stack.length > 0,
-    snapshots: stack,
+    hasSnapshots: filtered.length > 0,
+    snapshots: filtered,
   }
 }

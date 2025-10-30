@@ -3,8 +3,8 @@
   --panel-foreground: #f8fafc;
   --panel-muted: #94a3b8;
   --panel-border: rgba(148, 163, 184, 0.2);
-  --accent-primary: #eb2424;
-  --accent-secondary: #f8963a;
+  --accent-primary: #245feb;
+  --accent-secondary: #3ab9f8;
 }
 
 body[data-theme='builder-dark'] {

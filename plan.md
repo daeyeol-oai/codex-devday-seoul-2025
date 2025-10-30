@@ -70,6 +70,7 @@
 - [x] **Theme picker state**: Hydrate colour pickers on load by reading current CSS variables or a theme metadata endpoint so manual overrides survive refresh.
 - [x] **Snapshot availability**: Expose an endpoint to report stored Codex snapshots and initialise the Undo button state accordingly.
 - [x] **Theme snapshot timing**: Adjust theme API flow so snapshots are created after writes, guaranteeing undo availability even from a clean workspace.
+- [x] **Snapshot prune**: Automatically drop stale `.codex-snapshots.json` entries when git stashes are missing and continue undo with the next available snapshot.
 
 ## 11. Image Generation Enhancements *(completed)*
 - [x] Update the UI flow so `Generate images` works with text-only prompts, making the sketch upload optional while keeping prompt input mandatory.
