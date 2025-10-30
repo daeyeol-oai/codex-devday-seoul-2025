@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 
 import { error, json, methodNotAllowed } from '@/lib/server/http'
 import { resolveWorkspacePath } from '@/lib/server/fs-apply'
-import { createSnapshot } from '@/lib/server/git'
+import { createSnapshot, getSnapshotSummary } from '@/lib/server/git'
 import { logError, logInfo } from '@/lib/server/logger'
 
 export const runtime = 'nodejs'
@@ -43,17 +43,25 @@ export async function POST(request: NextRequest) {
   try {
     const payload = validateTheme(await request.json())
     const themePath = resolveWorkspacePath('styles', 'theme.css')
-    const snapshot = await createSnapshot('theme-update')
 
     const content = await fs.readFile(themePath, 'utf8')
     let nextContent = updateToken(content, '--accent-primary', payload.primary)
     nextContent = updateToken(nextContent, '--accent-secondary', payload.accent)
 
+    if (content === nextContent) {
+      const summary = await getSnapshotSummary()
+      logInfo('Theme update skipped (no changes)', { colors: payload })
+      return json({ ok: true, theme: payload, snapshotCreated: false, hasSnapshots: summary.hasSnapshots })
+    }
+
     await fs.writeFile(themePath, nextContent)
+
+    const snapshot = await createSnapshot('theme-update')
+    const summary = await getSnapshotSummary()
 
     logInfo('Theme updated', { snapshotCreated: Boolean(snapshot), colors: payload })
 
-    return json({ ok: true, theme: payload, snapshotCreated: Boolean(snapshot) })
+    return json({ ok: true, theme: payload, snapshotCreated: Boolean(snapshot), hasSnapshots: summary.hasSnapshots })
   } catch (err) {
     logError('Failed to update theme', err)
     return error(400, err instanceof Error ? err.message : 'Failed to update theme', { ok: false })

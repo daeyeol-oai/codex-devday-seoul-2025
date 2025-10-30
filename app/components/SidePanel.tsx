@@ -35,6 +35,7 @@ type Usage = {
 
 const DEFAULT_PRIMARY = '#2563eb'
 const DEFAULT_ACCENT = '#38bdf8'
+const COLOR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -51,6 +52,30 @@ function asNumber(value: unknown) {
   return typeof value === 'number' ? value : undefined
 }
 
+function rgbToHex(value: string) {
+  const normalized = value.replace(/\s+/g, '')
+  const match = normalized.match(/^rgb\((\d{1,3}),(\d{1,3}),(\d{1,3})\)$/i)
+  if (!match) return null
+  const clamp = (component: string) => {
+    const parsed = Number.parseInt(component, 10)
+    if (Number.isNaN(parsed)) return 0
+    return Math.max(0, Math.min(255, parsed))
+  }
+  const toHex = (component: number) => component.toString(16).padStart(2, '0')
+  const [, r, g, b] = match
+  return `#${toHex(clamp(r))}${toHex(clamp(g))}${toHex(clamp(b))}`.toLowerCase()
+}
+
+function normaliseColourToken(raw: string | undefined, fallback: string) {
+  const value = raw?.trim()
+  if (!value) return fallback
+  if (COLOR_HEX_REGEX.test(value)) {
+    return value.toLowerCase()
+  }
+  const rgb = rgbToHex(value)
+  if (rgb) return rgb
+  return fallback
+}
 function parseSseChunk(buffer: string, emit: (event: string, data: unknown) => void) {
   let remaining = buffer
   let boundary = remaining.indexOf('\n\n')
@@ -102,6 +127,22 @@ export default function SidePanel() {
   const [themeMessage, setThemeMessage] = useState<string | null>(null)
   const [undoMessage, setUndoMessage] = useState<string | null>(null)
 
+  const refreshSnapshotAvailability = useCallback(async () => {
+    try {
+      const response = await fetch('/api/codex/snapshots', {
+        method: 'GET',
+        cache: 'no-store',
+      })
+      if (!response.ok) return
+      const data = (await response.json().catch(() => null)) as { ok?: unknown; hasSnapshots?: unknown } | null
+      if (data && data.ok !== false && typeof data.hasSnapshots === 'boolean') {
+        setSnapshotAvailable(Boolean(data.hasSnapshots))
+      }
+    } catch (err) {
+      console.warn('Failed to load snapshot availability', err)
+    }
+  }, [])
+
   const resetState = useCallback(() => {
     setPlanItems([])
     setCommands([])
@@ -109,7 +150,6 @@ export default function SidePanel() {
     setMessages([])
     setUsage(null)
     setErrorMessage(null)
-    setSnapshotAvailable(false)
   }, [])
 
   const handleEvent = useCallback(
@@ -303,6 +343,13 @@ export default function SidePanel() {
     }
   }, [])
 
+  useEffect(() => {
+    const styles = getComputedStyle(document.documentElement)
+    setPrimary((prev) => normaliseColourToken(styles.getPropertyValue('--accent-primary'), prev))
+    setAccent((prev) => normaliseColourToken(styles.getPropertyValue('--accent-secondary'), prev))
+    refreshSnapshotAvailability()
+  }, [refreshSnapshotAvailability])
+
   const applyTheme = useCallback(async () => {
     setThemeMessage('Applying theme…')
     try {
@@ -319,11 +366,12 @@ export default function SidePanel() {
         throw new Error(message || 'Failed to apply theme')
       }
       setThemeMessage('Theme updated.')
-      setSnapshotAvailable(Boolean(data.snapshotCreated))
+      setSnapshotAvailable(Boolean(data.snapshotCreated ?? data.hasSnapshots))
+      await refreshSnapshotAvailability()
     } catch (err) {
       setThemeMessage(err instanceof Error ? err.message : 'Failed to apply theme')
     }
-  }, [primary, accent])
+  }, [accent, primary, refreshSnapshotAvailability])
 
   const undoSnapshot = useCallback(async () => {
     setUndoMessage('Restoring snapshot…')
@@ -340,11 +388,12 @@ export default function SidePanel() {
         throw new Error(data.reason ?? 'No snapshot to restore')
       }
       setUndoMessage('Workspace restored from latest snapshot.')
-      setSnapshotAvailable(false)
+      setSnapshotAvailable(Boolean(data.hasSnapshots))
+      await refreshSnapshotAvailability()
     } catch (err) {
       setUndoMessage(err instanceof Error ? err.message : 'Failed to restore snapshot')
     }
-  }, [])
+  }, [refreshSnapshotAvailability])
 
   const planComplete = useMemo(() => planItems.filter((item) => item.completed).length, [planItems])
 

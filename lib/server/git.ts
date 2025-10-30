@@ -1,3 +1,4 @@
+import os from 'os'
 import path from 'path'
 import { promisify } from 'util'
 import { execFile as execFileCb } from 'child_process'
@@ -40,6 +41,46 @@ async function workspaceHasChanges() {
   return stdout.trim().length > 0
 }
 
+async function listStashEntries() {
+  const { stdout } = await execFile('git', ['stash', 'list', '--format=%gd::%gs'], {
+    cwd: WORKSPACE_ROOT,
+  })
+
+  return stdout
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [ref, label] = entry.split('::')
+      return { ref, label }
+    })
+}
+
+async function getPatchForRef(ref: string) {
+  const { stdout } = await execFile('git', ['stash', 'show', '--patch', ref], { cwd: WORKSPACE_ROOT })
+  return stdout
+}
+
+function extractPathsFromPatch(patch: string) {
+  const paths = new Set<string>()
+  const lines = patch.split('\n')
+  for (const line of lines) {
+    if (line.startsWith('+++ b/')) {
+      const target = line.slice('+++ b/'.length).trim()
+      if (target && target !== '/dev/null') {
+        paths.add(target)
+      }
+    }
+    if (line.startsWith('--- a/')) {
+      const target = line.slice('--- a/'.length).trim()
+      if (target && target !== '/dev/null') {
+        paths.add(target)
+      }
+    }
+  }
+  return Array.from(paths)
+}
+
 export async function createSnapshot(label: string) {
   if (!(await ensureGitRepo())) {
     return null
@@ -77,29 +118,63 @@ export async function applyLatestSnapshot() {
     return { applied: false, reason: 'No snapshots available' }
   }
 
-  const { stdout } = await execFile('git', ['stash', 'list', '--format=%gd::%gs'], {
-    cwd: WORKSPACE_ROOT,
-  })
-
-  const entries = stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  const match = entries.find((line) => line.includes(snapshotLabel))
-  if (!match) {
+  const entries = await listStashEntries()
+  const target = entries.find((entry) => entry.label === snapshotLabel)
+  if (!target) {
     await writeSnapshotStack(stack)
     return { applied: false, reason: 'Snapshot expired or already applied' }
   }
 
-  const [ref] = match.split('::')
+  const targetPatch = await getPatchForRef(target.ref)
+  const targetPaths = extractPathsFromPatch(targetPatch)
   try {
-    await execFile('git', ['stash', 'pop', ref], { cwd: WORKSPACE_ROOT })
+    await execFile('git', ['stash', 'drop', target.ref], { cwd: WORKSPACE_ROOT })
   } catch (err) {
     await writeSnapshotStack(stack)
     throw err
   }
 
   await writeSnapshotStack(stack)
-  return { applied: true }
+
+  if (stack.length === 0) {
+    if (targetPaths.length > 0) {
+      await execFile('git', ['checkout', '--', ...targetPaths], { cwd: WORKSPACE_ROOT })
+    }
+    return { applied: true, remaining: 0 }
+  }
+
+  const remainingEntries = await listStashEntries()
+  const latestLabel = stack[stack.length - 1]
+  const latest = remainingEntries.find((entry) => entry.label === latestLabel)
+  if (!latest) {
+    return { applied: true, remaining: stack.length }
+  }
+
+  const latestPatch = await getPatchForRef(latest.ref)
+  const latestPaths = extractPathsFromPatch(latestPatch)
+  if (latestPaths.length > 0) {
+    await execFile('git', ['checkout', '--', ...latestPaths], { cwd: WORKSPACE_ROOT })
+  }
+
+  const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'codex-patch-'))
+  const patchPath = path.join(tmpDir, 'snapshot.patch')
+  try {
+    await fs.writeFile(patchPath, latestPatch, 'utf8')
+    await execFile('git', ['apply', '--whitespace=nowarn', patchPath], { cwd: WORKSPACE_ROOT })
+  } catch (err) {
+    throw err
+  } finally {
+    await fs.rm(patchPath, { force: true }).catch(() => {})
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
+  }
+
+  return { applied: true, remaining: stack.length }
+}
+
+export async function getSnapshotSummary() {
+  const stack = await readSnapshotStack()
+  return {
+    hasSnapshots: stack.length > 0,
+    snapshots: stack,
+  }
 }

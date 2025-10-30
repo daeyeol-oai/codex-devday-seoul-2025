@@ -257,13 +257,13 @@ export default function HomePage() {
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder='Describe your sketch...'
-              className='rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+              className='rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]'
             />
             <div className='flex items-center gap-3'>
               <button
                 type='submit'
                 disabled={!canGenerateImages || isGeneratingImages}
-                className='rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-300'
+                className='rounded-lg bg-[var(--accent-primary)] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60'
               >
                 {isGeneratingImages ? 'Generating…' : 'Generate images'}
               </button>
@@ -271,7 +271,7 @@ export default function HomePage() {
                 type='button'
                 onClick={handleLoadLatest}
                 disabled={isGeneratingImages || isLoadingLatest}
-                className='rounded-lg border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-blue-400 hover:text-blue-600 disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400'
+                className='rounded-lg border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)] disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400'
               >
                 {isLoadingLatest ? 'Loading…' : 'Load latest'}
               </button>
@@ -308,14 +308,14 @@ export default function HomePage() {
             onChange={(event) => setVideoPrompt(event.target.value)}
             placeholder='Describe the pacing, camera moves, and tone of the video...'
             rows={4}
-            className='w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100'
+            className='w-full rounded-lg border border-zinc-200 px-4 py-3 text-sm shadow-sm focus:border-[var(--accent-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]'
           />
           <div className='flex items-center gap-3'>
             <button
               type='button'
               onClick={handleGenerateVideo}
               disabled={!canGenerateVideo || isGeneratingVideo}
-              className='rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-300'
+              className='rounded-lg bg-[var(--accent-primary)] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[var(--accent-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-60'
             >
               {isGeneratingVideo ? 'Submitting to Sora…' : 'Create video'}
             </button>

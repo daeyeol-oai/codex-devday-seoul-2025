@@ -17,6 +17,7 @@
 - [x] Establish a centered column layout with responsive max-width, mirroring the white canvas on neutral background.
 - [x] Apply Tailwind utility classes; extend `app/globals.css` only if custom tokens (e.g., accent colour) are required.
 - [x] Ensure consistent spacing, focus states, and button variants (primary vs. secondary) matching the mock.
+- [x] Bind primary CTA/background colours to `--accent-primary` / `--accent-secondary` tokens so theme changes propagate without manual restyling.
 
 ## 4. State & Interactions
 - [x] Manage upload file, prompt text, and generated images via React state in the page component; wire callbacks to child components.
@@ -66,6 +67,9 @@
 - [ ] **Abort support**: Add an API or SSE signal so the SidePanel’s “중단” 버튼 can cancel an in-flight Codex run.
 - [x] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
 - [ ] **Snapshot clean-up**: Track active snapshots and auto-drop stale ones, preventing the stash stack from growing without bounds.
+- [x] **Theme picker state**: Hydrate colour pickers on load by reading current CSS variables or a theme metadata endpoint so manual overrides survive refresh.
+- [x] **Snapshot availability**: Expose an endpoint to report stored Codex snapshots and initialise the Undo button state accordingly.
+- [x] **Theme snapshot timing**: Adjust theme API flow so snapshots are created after writes, guaranteeing undo availability even from a clean workspace.
 
 ## 11. Image Generation Enhancements *(completed)*
 - [x] Update the UI flow so `Generate images` works with text-only prompts, making the sketch upload optional while keeping prompt input mandatory.
