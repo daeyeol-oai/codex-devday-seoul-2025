@@ -18,3 +18,9 @@ Automated tests are not yet configured—add them alongside features. Co-locate 
 Write commits in the imperative mood (`Add landing hero layout`) and keep them scoped to a single concern. Prefer smaller commits that map cleanly to reviewable changes. Pull requests should include: a concise summary of intent, screenshots or GIFs for UI updates, reproduction steps for bug fixes, and references to issue IDs when applicable. Confirm `npm run lint` (and any test scripts you introduce) succeed before requesting review; note remaining risks or follow-up work directly in the PR description.
 - Obtain explicit user approval before creating any git commit.
 - After completing work, provide the exact `git commit` command for the approved changes.
+
+## Codex Agent Workflow Notes
+- `/api/codex/agent` streams Codex SDK events as Server-Sent Events using the unified format `event: message` with `{ type, text, payload }`, plus a terminal `event: done` carrying `{ ok: true/false }`.
+- Codex runs within `workspace-write` sandbox mode confined to the repository root. No automatic git snapshot is created at turn start; snapshots are deferred to the edit-application phase (planned in `plan.md` section 10).
+- `/api/codex/theme` and `/api/codex/undo` now return `{ ok: true/false, ... }` so the UI can provide consistent feedback.
+- Further hardening tasks—edit verification, abort handling, snapshot cleanup—are tracked under “Codex Workflow Hardening” in `plan.md` and should be referenced before extending the agent.

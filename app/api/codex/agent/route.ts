@@ -3,7 +3,6 @@ import { NextRequest } from 'next/server'
 import { error, methodNotAllowed } from '@/lib/server/http'
 import { logError, logInfo } from '@/lib/server/logger'
 import { startWorkspaceThread } from '@/lib/server/codex'
-import { createSnapshot } from '@/lib/server/git'
 
 import type {
   ThreadEvent,
@@ -58,65 +57,112 @@ function createEmitter(controller: ReadableStreamDefaultController<Uint8Array>):
 function handleItemEvent(emitter: StreamEmitter, phase: 'started' | 'updated' | 'completed', item: ThreadItem) {
   switch (item.type) {
     case 'todo_list':
-      emitter.send('plan.updated', { phase, items: item.items })
+      emitter.send('message', {
+        type: 'plan.updated',
+        text: `Plan ${phase}`,
+        payload: { phase, items: item.items },
+      })
       break
     case 'command_execution':
-      emitter.send(`command.${phase}`, {
-        id: item.id,
-        command: item.command,
-        status: item.status,
-        exitCode: item.exit_code,
-        output: item.aggregated_output,
+      emitter.send('message', {
+        type: `command.${phase}`,
+        text: `${item.command} (${item.status})`,
+        payload: {
+          id: item.id,
+          command: item.command,
+          status: item.status,
+          exitCode: item.exit_code,
+          output: item.aggregated_output,
+        },
       })
       break
     case 'file_change':
-      emitter.send('file.change', {
-        id: item.id,
-        status: item.status,
-        changes: item.changes,
+      emitter.send('message', {
+        type: 'file.change',
+        text: `File change ${item.status}`,
+        payload: {
+          id: item.id,
+          status: item.status,
+          changes: item.changes,
+        },
       })
       break
     case 'agent_message':
-      emitter.send('message', { id: item.id, text: item.text })
+      emitter.send('message', {
+        type: 'agent.message',
+        text: item.text,
+        payload: { id: item.id },
+      })
       break
     case 'reasoning':
-      emitter.send('reasoning', { id: item.id, text: item.text })
+      emitter.send('message', {
+        type: 'reasoning',
+        text: item.text,
+        payload: { id: item.id },
+      })
       break
     case 'error':
-      emitter.send('error.item', { id: item.id, message: item.message })
+      emitter.send('message', {
+        type: 'error.item',
+        text: item.message,
+        payload: { id: item.id },
+      })
       break
     case 'mcp_tool_call':
-      emitter.send(`tool.${phase}`, {
-        id: item.id,
-        server: item.server,
-        tool: item.tool,
-        status: item.status,
+      emitter.send('message', {
+        type: `tool.${phase}`,
+        text: `${item.server}.${item.tool} (${item.status})`,
+        payload: {
+          id: item.id,
+          server: item.server,
+          tool: item.tool,
+          status: item.status,
+        },
       })
       break
     case 'web_search':
-      emitter.send(`search.${phase}`, {
-        id: item.id,
-        query: item.query,
+      emitter.send('message', {
+        type: `search.${phase}`,
+        text: `Search: ${item.query}`,
+        payload: {
+          id: item.id,
+          query: item.query,
+        },
       })
       break
     default:
-      emitter.send(`item.${phase}`, item)
+      emitter.send('message', {
+        type: `item.${phase}`,
+        payload: item,
+      })
   }
 }
 
 function forwardEvent(emitter: StreamEmitter, event: ThreadEvent) {
   switch (event.type) {
     case 'thread.started':
-      emitter.send('thread.started', { threadId: event.thread_id })
+      emitter.send('message', {
+        type: 'thread.started',
+        text: 'Thread started',
+        payload: { threadId: event.thread_id },
+      })
       break
     case 'turn.started':
-      emitter.send('turn.started', {})
+      emitter.send('message', { type: 'turn.started', text: 'Turn started' })
       break
     case 'turn.completed':
-      emitter.send('turn.completed', { usage: event.usage })
+      emitter.send('message', {
+        type: 'turn.completed',
+        text: 'Turn completed',
+        payload: { usage: event.usage },
+      })
       break
     case 'turn.failed':
-      emitter.send('turn.failed', { message: event.error.message })
+      emitter.send('message', {
+        type: 'turn.failed',
+        text: event.error.message,
+        payload: { error: event.error },
+      })
       break
     case 'item.started':
       handleItemEvent(emitter, 'started', (event as ItemStartedEvent).item)
@@ -128,7 +174,10 @@ function forwardEvent(emitter: StreamEmitter, event: ThreadEvent) {
       handleItemEvent(emitter, 'completed', (event as ItemCompletedEvent).item)
       break
     case 'error':
-      emitter.send('error', { message: event.message })
+      emitter.send('message', {
+        type: 'error',
+        text: event.message,
+      })
       break
   }
 }
@@ -147,7 +196,6 @@ function parsePayload(body: unknown): RunPayload {
 export async function POST(request: NextRequest) {
   try {
     const payload = parsePayload(await request.json())
-    const snapshot = await createSnapshot('agent-run')
     const thread = startWorkspaceThread()
 
     const stream = new ReadableStream<Uint8Array>({
@@ -159,10 +207,6 @@ export async function POST(request: NextRequest) {
         }
         request.signal.addEventListener('abort', abortHandler)
 
-        if (snapshot) {
-          emitter.send('snapshot.recorded', { label: snapshot })
-        }
-
         try {
           const { events } = await thread.runStreamed(payload.prompt)
           for await (const event of events) {
@@ -170,17 +214,23 @@ export async function POST(request: NextRequest) {
             forwardEvent(emitter, event)
           }
           if (!emitter.isClosed()) {
-            emitter.send('done', {})
+            emitter.send('done', { ok: true })
           }
         } catch (streamError) {
           logError('Codex streaming failed', streamError)
           if (!emitter.isClosed()) {
-            emitter.send('error', {
-              message:
+            emitter.send('message', {
+              type: 'error',
+              text:
                 streamError instanceof Error
                   ? streamError.message
                   : 'Unknown Codex streaming failure',
+              payload:
+                streamError instanceof Error
+                  ? { name: streamError.name, stack: streamError.stack }
+                  : undefined,
             })
+            emitter.send('done', { ok: false })
           }
         } finally {
           emitter.close()
@@ -189,7 +239,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    logInfo('Codex agent run dispatched', { snapshotCreated: Boolean(snapshot) })
+    logInfo('Codex agent run dispatched', {})
 
     return new Response(stream, {
       headers: {

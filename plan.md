@@ -61,8 +61,8 @@
 ## 10. Codex Workflow Hardening *(planned)*
 - [ ] **Agent execution flow**: Keep the SidePanel prompt submission UX, but run Codex without creating git snapshots automatically. Only snapshot when applying edits.
 - [ ] **Filesystem safety**: Implement `applyCodexPlan()` and `applyEditsSafely()` to enforce allowed paths (`app/`, `styles/`, `public/outputs/`) and verify `oldText` before writing files.
-- [ ] **Event normalization**: Stream all SSE payloads as `event: message` with `{ type, text, payload }` so the UI can display consistent logs.
-- [ ] **Completion signals**: Send `event: done` with `{ ok: true/false }` and ensure error states close the stream immediately.
+- [x] **Event normalization**: Stream all SSE payloads as `event: message` with `{ type, text, payload }` so the UI can display consistent logs.
+- [x] **Completion signals**: Send `event: done` with `{ ok: true/false }` and ensure error states close the stream immediately.
 - [ ] **Abort support**: Add an API or SSE signal so the SidePanel’s “중단” 버튼 can cancel an in-flight Codex run.
-- [ ] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
+- [x] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
 - [ ] **Snapshot clean-up**: Track active snapshots and auto-drop stale ones, preventing the stash stack from growing without bounds.

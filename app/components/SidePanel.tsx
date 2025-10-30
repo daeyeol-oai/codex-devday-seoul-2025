@@ -112,126 +112,127 @@ export default function SidePanel() {
     setSnapshotAvailable(false)
   }, [])
 
-  const handleEvent = useCallback((event: string, payload: unknown) => {
-    switch (event) {
-      case 'snapshot.recorded':
-        setSnapshotAvailable(true)
-        break
-      case 'plan.updated': {
+  const handleEvent = useCallback(
+    (event: string, payload: unknown) => {
+      if (event === 'message') {
         const record = asRecord(payload)
-        const rawItems = record && Array.isArray(record.items) ? (record.items as Array<Record<string, unknown>>) : []
-        const items: PlanItem[] = rawItems.map((item, index) => ({
-          id: `${index}`,
-          text: asString(item.text) ?? `Step ${index + 1}`,
-          completed: Boolean(item.completed),
-        }))
-        setPlanItems(items)
-        break
-      }
-      case 'command.started':
-      case 'command.updated':
-      case 'command.completed': {
-        const record = asRecord(payload)
-        if (!record) break
-        setCommands((prev) => {
-          const next = [...prev]
-          const id = asString(record.id) ?? `${next.length}`
-          const index = next.findIndex((item) => item.id === id)
-          const entry: CommandItem = {
-            id,
-            command: asString(record.command) ?? next[index]?.command ?? 'command',
-            status: asString(record.status) ?? next[index]?.status ?? 'in_progress',
-            exitCode: asNumber(record.exitCode),
-            output: asString(record.output) ?? next[index]?.output,
-          }
-          if (index >= 0) {
-            next[index] = { ...next[index], ...entry }
-          } else {
-            next.push(entry)
-          }
-          return next
-        })
-        break
-      }
-      case 'file.change':
-        setFiles((prev) => {
-          const record = asRecord(payload)
-          if (!record) return prev
-          const changes = Array.isArray(record.changes) ? (record.changes as Array<{ path: string; kind: string }>) : []
-          return [
-            ...prev,
-            {
-              id: asString(record.id) ?? `${prev.length}`,
-              status: asString(record.status) ?? 'completed',
-              changes,
-            },
-          ]
-        })
-        break
-      case 'message':
-        setMessages((prev) => {
-          const record = asRecord(payload)
-          return [
-            ...prev,
-            {
-              id: record && asString(record.id) ? (record.id as string) : `${prev.length}`,
-              text: record && asString(record.text) ? (record.text as string) : '',
-              tone: 'assistant',
-            },
-          ]
-        })
-        break
-      case 'reasoning':
-        setMessages((prev) => {
-          const record = asRecord(payload)
-          return [
-            ...prev,
-            {
-              id: record && asString(record.id) ? (record.id as string) : `reasoning-${prev.length}`,
-              text: record && asString(record.text) ? (record.text as string) : '',
-              tone: 'reasoning',
-            },
-          ]
-        })
-        break
-      case 'error':
-      case 'error.item':
-        setMessages((prev) => {
-          const record = asRecord(payload)
-          const message = record ? asString(record.message) : undefined
-          setErrorMessage(message ?? 'Codex run failed')
-          return [
-            ...prev,
-            {
-              id: `error-${prev.length}`,
-              text: message ?? 'Codex run failed',
-              tone: 'error',
-            },
-          ]
-        })
-        break
-      case 'turn.completed':
-        {
-          const record = asRecord(payload)
-          const usageRecord = record && asRecord(record.usage)
-          if (usageRecord) {
-            setUsage({
-              inputTokens: asNumber(usageRecord.input_tokens) ?? 0,
-              outputTokens: asNumber(usageRecord.output_tokens) ?? 0,
-            })
+        const type = asString(record?.type) ?? 'message'
+        const text = asString(record?.text)
+        const rawDetails = record && 'payload' in record ? (record.payload as unknown) : undefined
+        const details = asRecord(rawDetails)
+
+        const pushMessage = (tone: MessageItem['tone'] = 'assistant') => {
+          if (text) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `${type}-${prev.length}`,
+                text,
+                tone,
+              },
+            ])
           }
         }
-        break
-      case 'turn.failed':
-        setErrorMessage(asString(asRecord(payload)?.message) ?? 'Codex run failed')
-        break
-      case 'done':
+
+        switch (type) {
+          case 'plan.updated': {
+            const items = Array.isArray(details?.items)
+              ? (details?.items as Array<Record<string, unknown>>).map((item, index) => ({
+                  id: `${index}`,
+                  text: asString(item.text) ?? `Step ${index + 1}`,
+                  completed: Boolean(item.completed),
+                }))
+              : []
+            setPlanItems(items)
+            pushMessage()
+            break
+          }
+          case 'command.started':
+          case 'command.updated':
+          case 'command.completed': {
+            setCommands((prev) => {
+              const next = [...prev]
+              const id = asString(details?.id) ?? `${next.length}`
+              const index = next.findIndex((item) => item.id === id)
+              const entry: CommandItem = {
+                id,
+                command: asString(details?.command) ?? next[index]?.command ?? 'command',
+                status: asString(details?.status) ?? next[index]?.status ?? 'in_progress',
+                exitCode: asNumber(details?.exitCode),
+                output: asString(details?.output) ?? next[index]?.output,
+              }
+              if (index >= 0) {
+                next[index] = { ...next[index], ...entry }
+              } else {
+                next.push(entry)
+              }
+              return next
+            })
+            pushMessage()
+            break
+          }
+          case 'file.change': {
+            setFiles((prev) => {
+              const changes = Array.isArray(details?.changes)
+                ? (details?.changes as Array<{ path: string; kind: string }>)
+                : []
+              return [
+                ...prev,
+                {
+                  id: asString(details?.id) ?? `${prev.length}`,
+                  status: asString(details?.status) ?? 'completed',
+                  changes,
+                },
+              ]
+            })
+            pushMessage()
+            break
+          }
+          case 'reasoning':
+            pushMessage('reasoning')
+            break
+          case 'agent.message':
+            pushMessage('assistant')
+            break
+          case 'error':
+          case 'error.item':
+            setErrorMessage(text ?? 'Codex run failed')
+            pushMessage('error')
+            break
+          case 'turn.completed': {
+            const usageRecord = details && asRecord(details.usage)
+            if (usageRecord) {
+              setUsage({
+                inputTokens: asNumber(usageRecord.input_tokens) ?? 0,
+                outputTokens: asNumber(usageRecord.output_tokens) ?? 0,
+              })
+            }
+            pushMessage()
+            break
+          }
+          case 'turn.failed':
+            setErrorMessage(text ?? 'Codex run failed')
+            pushMessage('error')
+            break
+          default:
+            pushMessage('assistant')
+            break
+        }
+        return
+      }
+
+      if (event === 'done') {
+        const record = asRecord(payload)
+        const ok = record ? Boolean(record.ok) : true
         setIsRunning(false)
-        break
-      default:
-        break
-    }
-  }, [])
+        if (!ok && !errorMessage) {
+          setErrorMessage('Codex run failed')
+        }
+        controllerRef.current = null
+      }
+    },
+    [errorMessage],
+  )
 
   const runAgent = useCallback(async () => {
     if (!prompt.trim()) {
@@ -312,11 +313,13 @@ export default function SidePanel() {
         },
         body: JSON.stringify({ primary, accent }),
       })
-      if (!response.ok) {
-        const message = await response.text()
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.ok) {
+        const message = typeof data.error === 'string' ? data.error : undefined
         throw new Error(message || 'Failed to apply theme')
       }
-      setThemeMessage('Theme updated via Codex snapshot.')
+      setThemeMessage('Theme updated.')
+      setSnapshotAvailable(Boolean(data.snapshotCreated))
     } catch (err) {
       setThemeMessage(err instanceof Error ? err.message : 'Failed to apply theme')
     }
@@ -332,8 +335,8 @@ export default function SidePanel() {
         },
         body: JSON.stringify({}),
       })
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok || !data.ok) {
         throw new Error(data.reason ?? 'No snapshot to restore')
       }
       setUndoMessage('Workspace restored from latest snapshot.')

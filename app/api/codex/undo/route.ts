@@ -11,13 +11,13 @@ export async function POST(request: NextRequest) {
     await request.json().catch(() => ({}))
     const result = await applyLatestSnapshot()
     if (!result.applied) {
-      return json({ restored: false, reason: result.reason ?? 'No snapshot to restore' }, { status: 409 })
+      return json({ ok: false, reason: result.reason ?? 'No snapshot to restore' }, { status: 409 })
     }
     logInfo('Applied latest Codex snapshot', {})
-    return json({ restored: true })
+    return json({ ok: true })
   } catch (err) {
     logError('Failed to apply snapshot undo', err)
-    return error(500, err instanceof Error ? err.message : 'Failed to apply snapshot')
+    return error(500, err instanceof Error ? err.message : 'Failed to apply snapshot', { ok: false })
   }
 }
 

@@ -53,10 +53,10 @@ export async function POST(request: NextRequest) {
 
     logInfo('Theme updated', { snapshotCreated: Boolean(snapshot), colors: payload })
 
-    return json({ applied: true, theme: payload, snapshotCreated: Boolean(snapshot) })
+    return json({ ok: true, theme: payload, snapshotCreated: Boolean(snapshot) })
   } catch (err) {
     logError('Failed to update theme', err)
-    return error(400, err instanceof Error ? err.message : 'Failed to update theme')
+    return error(400, err instanceof Error ? err.message : 'Failed to update theme', { ok: false })
   }
 }
 
