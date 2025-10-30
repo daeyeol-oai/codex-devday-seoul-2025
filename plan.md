@@ -18,6 +18,7 @@
 - [x] Apply Tailwind utility classes; extend `app/globals.css` only if custom tokens (e.g., accent colour) are required.
 - [x] Ensure consistent spacing, focus states, and button variants (primary vs. secondary) matching the mock.
 - [x] Bind primary CTA/background colours to `--accent-primary` / `--accent-secondary` tokens so theme changes propagate without manual restyling.
+- [ ] Update hero title copy to '김똑딱' per latest branding request.
 
 ## 4. State & Interactions
 - [x] Manage upload file, prompt text, and generated images via React state in the page component; wire callbacks to child components.

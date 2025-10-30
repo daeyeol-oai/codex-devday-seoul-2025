@@ -200,3 +200,27 @@ export async function getSnapshotSummary() {
     snapshots: filtered,
   }
 }
+
+export async function dropSnapshot(snapshotLabel: string) {
+  const stack = await readSnapshotStack()
+  const index = stack.lastIndexOf(snapshotLabel)
+  if (index === -1) {
+    return { dropped: false, reason: 'not_found' as const }
+  }
+
+  stack.splice(index, 1)
+  await writeSnapshotStack(stack)
+
+  const entries = await listStashEntries()
+  const target = entries.find((entry) => entry.label.includes(snapshotLabel))
+  if (target) {
+    try {
+      await execFile('git', ['stash', 'drop', target.ref], { cwd: WORKSPACE_ROOT })
+    } catch (err) {
+      console.warn('[codex] Failed to drop stash entry', { label: snapshotLabel, error: err })
+      return { dropped: false, reason: 'drop_failed' as const }
+    }
+  }
+
+  return { dropped: true as const }
+}
