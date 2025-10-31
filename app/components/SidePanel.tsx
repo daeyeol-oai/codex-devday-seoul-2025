@@ -33,6 +33,14 @@ type Usage = {
   outputTokens: number
 }
 
+type DoneEventPayload = {
+  ok?: boolean
+  error?: string
+  hasSnapshots?: boolean
+  reason?: string
+  finalResponse?: string
+}
+
 const DEFAULT_PRIMARY = '#2563eb'
 const DEFAULT_ACCENT = '#38bdf8'
 const COLOR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
@@ -42,6 +50,33 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     return value as Record<string, unknown>
   }
   return null
+}
+
+function asDonePayload(value: unknown): DoneEventPayload | null {
+  const record = asRecord(value)
+  if (!record) return null
+  const payload: DoneEventPayload = {}
+  const ok = record['ok']
+  if (typeof ok === 'boolean') {
+    payload.ok = ok
+  }
+  const error = record['error']
+  if (typeof error === 'string') {
+    payload.error = error
+  }
+  const hasSnapshots = record['hasSnapshots']
+  if (typeof hasSnapshots === 'boolean') {
+    payload.hasSnapshots = hasSnapshots
+  }
+  const reason = record['reason']
+  if (typeof reason === 'string') {
+    payload.reason = reason
+  }
+  const finalResponse = record['finalResponse']
+  if (typeof finalResponse === 'string') {
+    payload.finalResponse = finalResponse
+  }
+  return payload
 }
 
 function asString(value: unknown) {
@@ -372,7 +407,7 @@ export default function SidePanel() {
     setThemeMessage('Applying theme…')
     setIsThemeRunning(true)
 
-    let donePayload: Record<string, unknown> | null = null
+    let donePayload: DoneEventPayload | null = null
 
     try {
       const response = await fetch('/api/codex/theme', {
@@ -405,7 +440,7 @@ export default function SidePanel() {
           }
         }
         if (event === 'done') {
-          donePayload = asRecord(data)
+          donePayload = asDonePayload(data)
         }
       }
 
@@ -420,16 +455,19 @@ export default function SidePanel() {
         parseSseChunk(buffer, emit)
       }
 
-      if (donePayload && donePayload.ok === false) {
-        const message = typeof donePayload.error === 'string' ? donePayload.error : 'Codex theme update failed'
+      const doneSummary: DoneEventPayload = donePayload ?? {}
+      const { ok, error: doneError, hasSnapshots, reason } = doneSummary
+
+      if (ok === false) {
+        const message = typeof doneError === 'string' ? doneError : 'Codex theme update failed'
         throw new Error(message)
       }
 
-      if (donePayload && typeof donePayload.hasSnapshots === 'boolean') {
-        setSnapshotAvailable(Boolean(donePayload.hasSnapshots))
+      if (typeof hasSnapshots === 'boolean') {
+        setSnapshotAvailable(hasSnapshots)
       }
 
-      if (donePayload && donePayload.reason === 'no_changes') {
+      if (reason === 'no_changes') {
         setThemeMessage('Colours already up to date.')
       } else {
         setThemeMessage('Theme updated.')
