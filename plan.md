@@ -75,6 +75,7 @@
 - [x] **Snapshot prune**: Automatically drop stale `.codex-snapshots.json` entries when git stashes are missing and continue undo with the next available snapshot.
 - [x] **Codex-driven theme edits**: Route Apply Theme requests through a Codex plan so CSS rewrites happen via the agent under sandbox controls.
 - [x] **Codex SSE wiring**: Stream Codex theme run progress back into the SidePanel UI, showing plan/command output during theme updates.
+- [x] **Final response event**: Surface the Codex turn `finalResponse` in SSE output and include it with the completion payload.
 
 ## 11. Image Generation Enhancements *(completed)*
 - [x] Update the UI flow so `Generate images` works with text-only prompts, making the sketch upload optional while keeping prompt input mandatory.

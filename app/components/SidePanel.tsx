@@ -164,14 +164,20 @@ export default function SidePanel() {
 
         const pushMessage = (tone: MessageItem['tone'] = 'assistant') => {
           if (text) {
-            setMessages((prev) => [
-              ...prev,
-              {
-                id: `${type}-${prev.length}`,
-                text,
-                tone,
-              },
-            ])
+            setMessages((prev) => {
+              const last = prev[prev.length - 1]
+              if (last && last.text === text && last.tone === tone) {
+                return prev
+              }
+              return [
+                ...prev,
+                {
+                  id: `${type}-${prev.length}`,
+                  text,
+                  tone,
+                },
+              ]
+            })
           }
         }
 
@@ -233,6 +239,7 @@ export default function SidePanel() {
             pushMessage('reasoning')
             break
           case 'agent.message':
+          case 'agent.final':
             pushMessage('assistant')
             break
           case 'error':

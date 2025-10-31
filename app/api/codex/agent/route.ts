@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
         request.signal.addEventListener('abort', abortHandler)
 
         let hasFileChanges = false
+        let finalResponse: string | null = null
 
         try {
           const { events } = await thread.runStreamed(payload.prompt)
@@ -222,6 +223,12 @@ export async function POST(request: NextRequest) {
             ) {
               hasFileChanges = true
             }
+            if (event.type === 'item.completed') {
+              const item = (event as ItemCompletedEvent).item
+              if (item.type === 'agent_message') {
+                finalResponse = item.text
+              }
+            }
             forwardEvent(emitter, event)
           }
           if (!emitter.isClosed()) {
@@ -232,11 +239,19 @@ export async function POST(request: NextRequest) {
               postRunSnapshot = await createSnapshot('agent-run-post')
             }
             const summary = await getSnapshotSummary()
+            if (finalResponse) {
+              emitter.send('message', {
+                type: 'agent.final',
+                text: finalResponse,
+                payload: { finalResponse },
+              })
+            }
             emitter.send('done', {
               ok: true,
               hasSnapshots: summary.hasSnapshots,
               snapshotCreated: Boolean(postRunSnapshot),
               preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
+              ...(finalResponse ? { finalResponse } : {}),
             })
           }
         } catch (streamError) {
@@ -260,12 +275,20 @@ export async function POST(request: NextRequest) {
               postRunSnapshot = await createSnapshot('agent-run-post')
             }
             const summary = await getSnapshotSummary()
+            if (finalResponse) {
+              emitter.send('message', {
+                type: 'agent.final',
+                text: finalResponse,
+                payload: { finalResponse },
+              })
+            }
             emitter.send('done', {
               ok: false,
               error: streamError instanceof Error ? streamError.message : 'Codex streaming failed',
               hasSnapshots: summary.hasSnapshots,
               snapshotCreated: Boolean(postRunSnapshot),
               preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
+              ...(finalResponse ? { finalResponse } : {}),
             })
           }
         } finally {
