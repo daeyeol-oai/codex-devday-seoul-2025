@@ -150,10 +150,11 @@ export async function applyLatestSnapshot() {
 
     await writeSnapshotStack(stack)
 
+    if (targetPaths.length > 0) {
+      await execFile('git', ['checkout', '--', ...targetPaths], { cwd: WORKSPACE_ROOT })
+    }
+
     if (stack.length === 0) {
-      if (targetPaths.length > 0) {
-        await execFile('git', ['checkout', '--', ...targetPaths], { cwd: WORKSPACE_ROOT })
-      }
       return { applied: true, remaining: 0 }
     }
 
