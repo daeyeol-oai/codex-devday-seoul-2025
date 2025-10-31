@@ -62,6 +62,7 @@
 
 ## 10. Codex Workflow Hardening *(planned)*
 - [ ] **Agent execution flow**: Keep the SidePanel prompt submission UX, but run Codex without creating git snapshots automatically. Only snapshot when applying edits.
+- [x] Ensure Codex agent/theme runs always capture post-run snapshots so undo restores the pre-run workspace state regardless of existing changes.
 - [ ] **Filesystem safety**: Implement `applyCodexPlan()` and `applyEditsSafely()` to enforce allowed paths (`app/`, `styles/`, `public/outputs/`) and verify `oldText` before writing files.
 - [x] **Event normalization**: Stream all SSE payloads as `event: message` with `{ type, text, payload }` so the UI can display consistent logs.
 - [x] **Completion signals**: Send `event: done` with `{ ok: true/false }` and ensure error states close the stream immediately.

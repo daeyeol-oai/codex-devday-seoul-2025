@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server'
 import { startWorkspaceThread } from '@/lib/server/codex'
 import { error, methodNotAllowed } from '@/lib/server/http'
 import { resolveWorkspacePath } from '@/lib/server/fs-apply'
-import { createSnapshot, getSnapshotSummary } from '@/lib/server/git'
+import { createSnapshot, dropSnapshot, getSnapshotSummary } from '@/lib/server/git'
 import { logError, logInfo } from '@/lib/server/logger'
 
 import type {
@@ -259,6 +259,9 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    const preRunSnapshot = await createSnapshot('theme-update-pre')
+    let postRunSnapshot: string | null = null
+
     const prompt = buildPrompt(payload)
     const thread = startWorkspaceThread()
 
@@ -277,29 +280,41 @@ export async function POST(request: NextRequest) {
         request.signal.addEventListener('abort', abortHandler)
 
         ;(async () => {
+          let hasFileChanges = false
           try {
             const { events } = await thread.runStreamed(prompt)
             for await (const event of events) {
               if (emitter.isClosed()) break
+              if (
+                (event.type === 'item.started' || event.type === 'item.updated' || event.type === 'item.completed') &&
+                ((event as ItemStartedEvent | ItemUpdatedEvent | ItemCompletedEvent).item.type === 'file_change')
+              ) {
+                hasFileChanges = true
+              }
               forwardEvent(emitter, event)
             }
 
-            const snapshot = await createSnapshot('theme-update')
+            if (!hasFileChanges && preRunSnapshot) {
+              await dropSnapshot(preRunSnapshot)
+            }
+
+            postRunSnapshot = await createSnapshot('theme-update-post')
             const summary = await getSnapshotSummary()
 
             emitter.send('message', {
               type: 'theme.completed',
               text: 'Theme updated successfully.',
               payload: {
-                snapshotCreated: Boolean(snapshot),
+                snapshotCreated: Boolean(postRunSnapshot),
                 hasSnapshots: summary.hasSnapshots,
                 theme: payload,
               },
             })
             emitter.send('done', {
               ok: true,
-              snapshotCreated: Boolean(snapshot),
+              snapshotCreated: Boolean(postRunSnapshot),
               hasSnapshots: summary.hasSnapshots,
+              preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
             })
           } catch (runError) {
             logError('Codex theme update failed', runError, { theme: payload })
@@ -307,9 +322,19 @@ export async function POST(request: NextRequest) {
               type: 'error',
               text: runError instanceof Error ? runError.message : 'Codex theme update failed',
             })
+            if (!hasFileChanges && preRunSnapshot) {
+              await dropSnapshot(preRunSnapshot)
+            }
+            if (hasFileChanges) {
+              postRunSnapshot = await createSnapshot('theme-update-post')
+            }
+            const summary = await getSnapshotSummary()
             emitter.send('done', {
               ok: false,
               error: runError instanceof Error ? runError.message : 'Codex theme update failed',
+              hasSnapshots: summary.hasSnapshots,
+              snapshotCreated: Boolean(postRunSnapshot),
+              preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
             })
           } finally {
             emitter.close()

@@ -197,7 +197,8 @@ function parsePayload(body: unknown): RunPayload {
 export async function POST(request: NextRequest) {
   try {
     const payload = parsePayload(await request.json())
-    let snapshotLabel = await createSnapshot('agent-run')
+    const preRunSnapshot = await createSnapshot('agent-run-pre')
+    let postRunSnapshot: string | null = null
     const thread = startWorkspaceThread()
 
     const stream = new ReadableStream<Uint8Array>({
@@ -224,15 +225,19 @@ export async function POST(request: NextRequest) {
             forwardEvent(emitter, event)
           }
           if (!emitter.isClosed()) {
-            if (!hasFileChanges && snapshotLabel) {
-              await dropSnapshot(snapshotLabel)
-              snapshotLabel = null
+            if (!hasFileChanges && preRunSnapshot) {
+              await dropSnapshot(preRunSnapshot)
             }
-            if (hasFileChanges && !snapshotLabel) {
-              snapshotLabel = await createSnapshot('agent-run')
+            if (hasFileChanges) {
+              postRunSnapshot = await createSnapshot('agent-run-post')
             }
             const summary = await getSnapshotSummary()
-            emitter.send('done', { ok: true, hasSnapshots: summary.hasSnapshots })
+            emitter.send('done', {
+              ok: true,
+              hasSnapshots: summary.hasSnapshots,
+              snapshotCreated: Boolean(postRunSnapshot),
+              preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
+            })
           }
         } catch (streamError) {
           logError('Codex streaming failed', streamError)
@@ -248,18 +253,19 @@ export async function POST(request: NextRequest) {
                   ? { name: streamError.name, stack: streamError.stack }
                   : undefined,
             })
-            if (!hasFileChanges && snapshotLabel) {
-              await dropSnapshot(snapshotLabel)
-              snapshotLabel = null
+            if (!hasFileChanges && preRunSnapshot) {
+              await dropSnapshot(preRunSnapshot)
             }
-            if (hasFileChanges && !snapshotLabel) {
-              snapshotLabel = await createSnapshot('agent-run')
+            if (hasFileChanges) {
+              postRunSnapshot = await createSnapshot('agent-run-post')
             }
             const summary = await getSnapshotSummary()
             emitter.send('done', {
               ok: false,
               error: streamError instanceof Error ? streamError.message : 'Codex streaming failed',
               hasSnapshots: summary.hasSnapshots,
+              snapshotCreated: Boolean(postRunSnapshot),
+              preSnapshotRetained: Boolean(preRunSnapshot && hasFileChanges),
             })
           }
         } finally {
@@ -269,7 +275,9 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    logInfo('Codex agent run dispatched', { snapshotCreated: Boolean(snapshotLabel) })
+    logInfo('Codex agent run dispatched', {
+      preRunSnapshotSaved: Boolean(preRunSnapshot),
+    })
 
     return new Response(stream, {
       headers: {
