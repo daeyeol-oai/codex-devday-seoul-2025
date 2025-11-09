@@ -98,6 +98,8 @@ async function loadRunAssets(runId: string, absolutePath: string): Promise<Lates
   }
 }
 
+const RESERVED_RUN_IDS = ['chosen', 'codex-uploads', 'codex-upload']
+
 async function getChosenRun(): Promise<LatestAssetsResponse | null> {
   const outputsRoot = getOutputsRoot()
   const chosenPath = path.join(outputsRoot, 'chosen')
@@ -149,7 +151,7 @@ export async function GET() {
     }
 
     const runs = await listRuns()
-    const ordered = await sortRunsByModified(runs, ['chosen'])
+    const ordered = await sortRunsByModified(runs, RESERVED_RUN_IDS)
 
     for (const run of ordered) {
       const safeRunId = sanitizePathSegment(run.runId, run.runId)

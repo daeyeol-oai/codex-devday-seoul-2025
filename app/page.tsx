@@ -36,6 +36,13 @@ export default function HomePage() {
   const [progress, setProgress] = useState<VideoProgressSnapshot | null>(null)
   const [isPollingProgress, setIsPollingProgress] = useState(false)
   const [usedReference, setUsedReference] = useState(false)
+  const [cachedVideoAsset, setCachedVideoAsset] = useState<{
+    runId: string
+    fileName: string
+    url: string
+  } | null>(null)
+  const [cachedVideoProgress, setCachedVideoProgress] = useState<VideoProgressSnapshot | null>(null)
+  const [cachedVideoPrompt, setCachedVideoPrompt] = useState('')
 
   const selectedImage = useMemo(
     () => images.find((image) => image.id === selectedImageId) ?? null,
@@ -44,12 +51,34 @@ export default function HomePage() {
 
   const canGenerateImages = prompt.trim().length > 0
   const canGenerateVideo = Boolean(selectedImage && (videoPrompt.trim().length > 0 || prompt.trim().length > 0))
+  const canLoadStoredVideo = Boolean(
+    cachedVideoAsset && runId && cachedVideoAsset.runId === runId && cachedVideoAsset.url,
+  )
 
   const handleSketchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     setSketchFile(file ?? null)
     setSketchLabel(file ? file.name : 'No file chosen')
   }, [])
+
+  const handleLoadLatestVideo = useCallback(() => {
+    if (!cachedVideoAsset || cachedVideoAsset.runId !== runId) {
+      return
+    }
+
+    setVideoError(null)
+    setVideoResult({
+      url: cachedVideoAsset.url,
+      fileName: cachedVideoAsset.fileName,
+      id: `${cachedVideoAsset.runId}-latest-video`,
+    })
+    if (cachedVideoProgress) {
+      setProgress(cachedVideoProgress)
+    }
+    if (cachedVideoPrompt) {
+      setVideoPrompt(cachedVideoPrompt)
+    }
+  }, [cachedVideoAsset, cachedVideoProgress, cachedVideoPrompt, runId])
 
   const handleGenerateImages = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -63,6 +92,9 @@ export default function HomePage() {
     setVideoResult(null)
     setProgress(null)
     setSelectedImageId(null)
+    setCachedVideoAsset(null)
+    setCachedVideoProgress(null)
+    setCachedVideoPrompt('')
 
     try {
       const formData = new FormData()
@@ -134,6 +166,22 @@ export default function HomePage() {
       }))
       setImages(mappedImages)
       setSelectedImageId(mappedImages[0]?.id ?? null)
+      const snapshot = payload.progress ? (payload.progress as VideoProgressSnapshot) : null
+      if (payload.video) {
+        setCachedVideoAsset({
+          runId: payload.runId,
+          fileName: payload.video.fileName,
+          url: payload.video.url,
+        })
+        setCachedVideoProgress(snapshot)
+        const promptFromSnapshot = snapshot?.prompt ?? ''
+        const metadataPrompt = payload.metadata?.prompt ?? ''
+        setCachedVideoPrompt(promptFromSnapshot || metadataPrompt)
+      } else {
+        setCachedVideoAsset(null)
+        setCachedVideoProgress(null)
+        setCachedVideoPrompt('')
+      }
       setVideoResult(null)
       setProgress(null)
       setVideoError(null)
@@ -226,6 +274,13 @@ export default function HomePage() {
       const payload = (await response.json()) as VideoGenerationResponse
       setVideoResult(payload.video)
       setProgress(payload.progress)
+      setCachedVideoAsset({
+        runId,
+        fileName: payload.video.fileName,
+        url: payload.video.url,
+      })
+      setCachedVideoProgress(payload.progress)
+      setCachedVideoPrompt(payload.progress.prompt || videoPromptValue)
     } catch (err) {
       setVideoError(err instanceof Error ? err.message : 'Video generation failed')
     } finally {
@@ -319,6 +374,16 @@ export default function HomePage() {
             >
               {isGeneratingVideo ? 'Submitting to Sora…' : 'Create video'}
             </button>
+            {canLoadStoredVideo ? (
+              <button
+                type='button'
+                onClick={handleLoadLatestVideo}
+                disabled={isGeneratingVideo}
+                className='rounded-lg border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 shadow-sm transition hover:border-[var(--accent-primary)] hover:text-[var(--accent-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-primary)] disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400'
+              >
+                Load latest
+              </button>
+            ) : null}
             <p className='text-sm text-zinc-500'>Target: 8s · 1280×720</p>
           </div>
           {videoError ? <p className='text-sm text-red-500'>{videoError}</p> : null}
