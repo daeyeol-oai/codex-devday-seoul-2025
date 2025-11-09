@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ImageCarousel } from '@/app/components/ImageCarousel'
 import { ImageGrid } from '@/app/components/ImageGrid'
@@ -43,6 +43,7 @@ export default function HomePage() {
   } | null>(null)
   const [cachedVideoProgress, setCachedVideoProgress] = useState<VideoProgressSnapshot | null>(null)
   const [cachedVideoPrompt, setCachedVideoPrompt] = useState('')
+  const hasAttemptedInitialLoad = useRef(false)
 
   const selectedImage = useMemo(
     () => images.find((image) => image.id === selectedImageId) ?? null,
@@ -192,6 +193,15 @@ export default function HomePage() {
       setIsLoadingLatest(false)
     }
   }, [])
+
+  useEffect(() => {
+    if (hasAttemptedInitialLoad.current) {
+      return
+    }
+
+    hasAttemptedInitialLoad.current = true
+    void handleLoadLatest()
+  }, [handleLoadLatest])
 
   useEffect(() => {
     if (!isPollingProgress || !runId) {
