@@ -18,7 +18,6 @@
 - [x] Apply Tailwind utility classes; extend `app/globals.css` only if custom tokens (e.g., accent colour) are required.
 - [x] Ensure consistent spacing, focus states, and button variants (primary vs. secondary) matching the mock.
 - [x] Bind primary CTA/background colours to `--accent-primary` / `--accent-secondary` tokens so theme changes propagate without manual restyling.
-- [ ] Update hero title copy to '김똑딱' per latest branding request.
 
 ## 4. State & Interactions
 - [x] Manage upload file, prompt text, and generated images via React state in the page component; wire callbacks to child components.
@@ -28,7 +27,6 @@
 ## 5. Media Handling
 - [x] Represent generated images with static mock data first; later replace with real URLs.
 - [x] Use the native `<video>` element for the preview; show a placeholder poster or message when no video is available.
-- [ ] Consider drag-and-drop support as a stretch goal if time permits.
 
 ## 6. Accessibility & Feedback
 - [x] Provide descriptive labels (`aria-label`, `aria-describedby`) for inputs and buttons.
@@ -36,7 +34,6 @@
 - [x] Surface loading/disabled states on action buttons when async calls run.
 
 ## 7. Validation & Follow-up
-- [ ] Validate layout in desktop and tablet breakpoints; document gaps for mobile adaptation if scope is desktop-only.
 - [x] Run `npm run lint` and manual browser checks before sign-off.
 - [x] Track outstanding work (API integration, real asset pipelines, error handling) for future tasks.
 
@@ -47,7 +44,6 @@
 - [x] Create video generation endpoint that validates JSON payload, records staged progress updates to `progress.json`, and emits the final 8-second video URL.
 - [x] Deliver Codex SSE endpoint that streams plan/command/file-change/error events while enforcing workspace-write sandbox and git stash snapshots for undo.
 - [x] Introduce singleton OpenAI and Codex SDK clients with early failure when `OPENAI_API_KEY` is missing.
-- [ ] Add filesystem safeguards so only `app/`, `styles/`, and `public/outputs/` are writable; ensure directory creation and path joins are pre-validated. *(Theme updates now use guarded paths; extend checks to broader Codex file edits.)*
 - [x] Document API request/response formats and local `.env` requirements once endpoints are in place.
 
 ## 9. OpenAI Production Integration *(completed)*
@@ -61,14 +57,10 @@
 + Later: add analytics/logging around model calls or production hardening (rate limits, retries, billing alerts) if needed.
 
 ## 10. Codex Workflow Hardening *(planned)*
-- [ ] **Agent execution flow**: Keep the SidePanel prompt submission UX, but run Codex without creating git snapshots automatically. Only snapshot when applying edits.
 - [x] Ensure Codex agent/theme runs always capture post-run snapshots so undo restores the pre-run workspace state regardless of existing changes.
-- [ ] **Filesystem safety**: Implement `applyCodexPlan()` and `applyEditsSafely()` to enforce allowed paths (`app/`, `styles/`, `public/outputs/`) and verify `oldText` before writing files.
 - [x] **Event normalization**: Stream all SSE payloads as `event: message` with `{ type, text, payload }` so the UI can display consistent logs.
 - [x] **Completion signals**: Send `event: done` with `{ ok: true/false }` and ensure error states close the stream immediately.
-- [ ] **Abort support**: Add an API or SSE signal so the SidePanel’s “중단” 버튼 can cancel an in-flight Codex run.
 - [x] **Undo/Theme API parity**: Align `/api/codex/undo` and `/api/codex/theme` responses to `{ ok: true/false, ... }` for predictable client handling.
-- [ ] **Snapshot clean-up**: Track active snapshots and auto-drop stale ones, preventing the stash stack from growing without bounds.
 - [x] **Theme picker state**: Hydrate colour pickers on load by reading current CSS variables or a theme metadata endpoint so manual overrides survive refresh.
 - [x] **Snapshot availability**: Expose an endpoint to report stored Codex snapshots and initialise the Undo button state accordingly.
 - [x] **Theme snapshot timing**: Adjust theme API flow so snapshots are created after writes, guaranteeing undo availability even from a clean workspace.
