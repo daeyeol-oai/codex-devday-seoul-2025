@@ -14,3 +14,6 @@ _Last reset: 2025-11-12. Previous snapshot archived in docs/plan-history-2025111
 - [x] Extend `/api/codex/agent` payload/schema so a turn can include zero or more local image paths and forward them to `thread.runStreamed`.
 - [x] Create an upload flow that writes selected files to `.codex-uploads/<uuid>/` (add folder to `.gitignore`) and returns the stored path.
 - [x] Update the Run Codex client UI with an "Attach image" control, show/remove pending attachments, and include their paths whenever the user runs Codex.
+
+### Codex upload storage
+- [x] Move upload persistence to `public/codex-run/<uuid>` and update APIs/ignore lists so Codex and the UI read from the new location.

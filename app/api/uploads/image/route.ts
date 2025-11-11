@@ -10,7 +10,7 @@ import { logError } from '@/lib/server/logger'
 export const runtime = 'nodejs'
 
 const WORKSPACE_ROOT = process.cwd()
-const UPLOAD_ROOT = path.join(WORKSPACE_ROOT, '.codex-uploads')
+const CODEX_UPLOAD_ROOT = path.join(WORKSPACE_ROOT, 'public', 'codex-run')
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,8 +23,8 @@ export async function POST(request: NextRequest) {
       return error(400, 'Image file is empty.')
     }
 
-    const bucket = randomUUID()
-    const targetDir = path.join(UPLOAD_ROOT, bucket)
+    const bucket = createUploadBucket()
+    const targetDir = path.join(CODEX_UPLOAD_ROOT, bucket)
     await fs.mkdir(targetDir, { recursive: true })
 
     const safeName = sanitizeFilename(file.name)
@@ -56,4 +56,8 @@ function sanitizeFilename(name: string) {
   const normalised = base.replace(/\s+/g, '-')
   const safe = normalised.replace(/[^a-zA-Z0-9.\-_]/g, '_')
   return safe.length > 0 ? safe : `image-${Date.now()}`
+}
+
+function createUploadBucket() {
+  return randomUUID().split('-')[0]
 }
