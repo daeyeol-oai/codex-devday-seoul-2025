@@ -214,20 +214,26 @@ function parsePayload(body: unknown): RunPayload {
   return images ? { prompt, images } : { prompt }
 }
 
-function createThreadInput(prompt: string, images: string[]): Input {
+type ThreadInputPayload = {
+  input: Input
+  resolvedImages: string[]
+}
+
+function createThreadInput(prompt: string, images: string[]): ThreadInputPayload {
   if (!images.length) {
-    return prompt
+    return { input: prompt, resolvedImages: [] }
   }
 
+  const resolvedImages = images.map((imagePath) => resolveImagePath(imagePath))
   const items = [
     { type: 'text' as const, text: prompt },
-    ...images.map((imagePath) => ({
+    ...resolvedImages.map((imagePath) => ({
       type: 'local_image' as const,
-      path: resolveImagePath(imagePath),
+      path: imagePath,
     })),
   ]
 
-  return items
+  return { input: items, resolvedImages }
 }
 
 function resolveImagePath(imagePath: string) {
@@ -235,6 +241,25 @@ function resolveImagePath(imagePath: string) {
   if (!normalized) return WORKSPACE_ROOT
   const absolute = path.isAbsolute(normalized) ? normalized : path.join(WORKSPACE_ROOT, normalized)
   return path.normalize(absolute)
+}
+
+function logExecPreview(images: string[], prompt: string) {
+  const base = [
+    'codex',
+    'exec',
+    '--experimental-json',
+    '--sandbox',
+    'workspace-write',
+    '--cd',
+    WORKSPACE_ROOT,
+  ]
+  const imageArgs = images.flatMap((image) => ['--image', image])
+  const command = [...base, ...imageArgs].join(' ')
+  logInfo('Codex exec command preview', {
+    command,
+    images,
+    prompt,
+  })
 }
 
 export async function POST(request: NextRequest) {
@@ -257,7 +282,8 @@ export async function POST(request: NextRequest) {
         let finalResponse: string | null = null
 
         try {
-          const input = createThreadInput(payload.prompt, payload.images ?? [])
+          const { input, resolvedImages } = createThreadInput(payload.prompt, payload.images ?? [])
+          logExecPreview(resolvedImages, payload.prompt)
           const { events } = await thread.runStreamed(input)
           for await (const event of events) {
             if (emitter.isClosed()) break
