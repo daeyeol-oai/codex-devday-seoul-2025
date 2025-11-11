@@ -244,22 +244,26 @@ function resolveImagePath(imagePath: string) {
 }
 
 function logExecPreview(images: string[], prompt: string) {
-  const base = [
+  const parts = [
     'codex',
     'exec',
+    shellQuote(prompt),
     '--experimental-json',
     '--sandbox',
     'workspace-write',
     '--cd',
-    WORKSPACE_ROOT,
+    shellQuote(WORKSPACE_ROOT),
+    ...images.flatMap((image) => ['--image', shellQuote(image)]),
   ]
-  const imageArgs = images.flatMap((image) => ['--image', image])
-  const command = [...base, ...imageArgs].join(' ')
+  const shellCommand = parts.join(' ')
   logInfo('Codex exec command preview', {
-    command,
-    images,
-    prompt,
+    shellCommand,
   })
+}
+
+function shellQuote(value: string) {
+  if (!value) return "''"
+  return `'${value.replace(/'/g, `'\"'\"'`)}'`
 }
 
 export async function POST(request: NextRequest) {
