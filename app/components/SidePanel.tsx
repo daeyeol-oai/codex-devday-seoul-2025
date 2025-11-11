@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 
 type PlanItem = {
   id: string
@@ -39,6 +39,14 @@ type DoneEventPayload = {
   hasSnapshots?: boolean
   reason?: string
   finalResponse?: string
+}
+
+type Attachment = {
+  id: string
+  name: string
+  status: 'uploading' | 'ready' | 'error'
+  path?: string
+  error?: string
 }
 
 const DEFAULT_PRIMARY = '#2563eb'
@@ -154,8 +162,10 @@ export default function SidePanel() {
   const [messages, setMessages] = useState<MessageItem[]>([])
   const [usage, setUsage] = useState<Usage | null>(null)
   const [snapshotAvailable, setSnapshotAvailable] = useState(false)
+  const [attachments, setAttachments] = useState<Attachment[]>([])
 
   const controllerRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [primary, setPrimary] = useState(DEFAULT_PRIMARY)
   const [accent, setAccent] = useState(DEFAULT_ACCENT)
@@ -186,6 +196,72 @@ export default function SidePanel() {
     setMessages([])
     setUsage(null)
     setErrorMessage(null)
+  }, [])
+
+  const uploadAttachment = useCallback(async (attachmentId: string, file: File) => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/uploads/image', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = (await response.json().catch(() => null)) as
+        | { ok?: unknown; error?: unknown; file?: { path?: unknown } }
+        | null
+
+      const storedPath =
+        data && data.file && typeof data.file.path === 'string' ? (data.file.path as string) : null
+
+      if (!response.ok || !storedPath) {
+        const serverError = data && typeof data.error === 'string' ? (data.error as string) : null
+        throw new Error(serverError ?? 'Failed to upload image')
+      }
+
+      setAttachments((prev) =>
+        prev.map((item) => (item.id === attachmentId ? { ...item, status: 'ready', path: storedPath } : item)),
+      )
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to upload image'
+      setAttachments((prev) =>
+        prev.map((item) => (item.id === attachmentId ? { ...item, status: 'error', error: message } : item)),
+      )
+    }
+  }, [])
+
+  const handleFilesSelected = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const fileList = event.target.files
+      if (!fileList || fileList.length === 0) return
+
+      const selections: Attachment[] = []
+      Array.from(fileList).forEach((file) => {
+        const id =
+          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+        const attachment: Attachment = {
+          id,
+          name: file.name || 'image',
+          status: 'uploading',
+        }
+        selections.push(attachment)
+        void uploadAttachment(id, file)
+      })
+      setAttachments((prev) => [...prev, ...selections])
+      event.target.value = ''
+    },
+    [uploadAttachment],
+  )
+
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const removeAttachment = useCallback((attachmentId: string) => {
+    setAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
   }, [])
 
   const handleEvent = useCallback(
@@ -317,11 +393,26 @@ export default function SidePanel() {
     [errorMessage],
   )
 
+  const hasPendingUploads = useMemo(
+    () => attachments.some((item) => item.status === 'uploading'),
+    [attachments],
+  )
+
   const runAgent = useCallback(async () => {
-    if (!prompt.trim()) {
+    const trimmedPrompt = prompt.trim()
+    if (!trimmedPrompt) {
       setErrorMessage('Enter instructions before running Codex.')
       return
     }
+
+    if (hasPendingUploads) {
+      setErrorMessage('이미지 업로드가 끝난 뒤 다시 시도하세요.')
+      return
+    }
+
+    const readyImages = attachments
+      .filter((item) => item.status === 'ready' && typeof item.path === 'string')
+      .map((item) => item.path as string)
 
     if (controllerRef.current) {
       controllerRef.current.abort()
@@ -334,12 +425,17 @@ export default function SidePanel() {
     controllerRef.current = controller
 
     try {
+      const payload: Record<string, unknown> = { prompt: trimmedPrompt }
+      if (readyImages.length > 0) {
+        payload.images = readyImages
+      }
+
       const response = await fetch('/api/codex/agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       })
 
@@ -374,7 +470,7 @@ export default function SidePanel() {
     } finally {
       controllerRef.current = null
     }
-  }, [prompt, handleEvent, resetState])
+  }, [attachments, handleEvent, hasPendingUploads, prompt, resetState])
 
   const cancelRun = useCallback(() => {
     controllerRef.current?.abort()
@@ -527,11 +623,62 @@ export default function SidePanel() {
             rows={4}
             className='w-full rounded-md border border-[var(--panel-border)]/80 bg-transparent p-3 text-sm text-[var(--panel-foreground)] focus:border-[var(--accent-secondary)] focus:outline-none'
           />
-          <div className='flex items-center gap-3'>
+          {attachments.length ? (
+            <div className='space-y-2 rounded-md border border-[var(--panel-border)]/60 bg-white/5 p-3 text-xs'>
+              <div className='flex items-center justify-between text-[var(--panel-muted)]'>
+                <span className='font-semibold uppercase tracking-[0.2em]'>Attachments</span>
+                <span>{attachments.length}</span>
+              </div>
+              <ul className='space-y-2'>
+                {attachments.map((attachment) => (
+                  <li
+                    key={attachment.id}
+                    className='flex items-center justify-between rounded border border-[var(--panel-border)]/40 bg-black/5 px-3 py-2 text-[var(--panel-foreground)]'
+                  >
+                    <div className='min-w-0 pr-3'>
+                      <p className='truncate font-medium'>{attachment.name}</p>
+                      <p className='text-[var(--panel-muted)]'>
+                        {attachment.status === 'uploading'
+                          ? 'Uploading…'
+                          : attachment.status === 'error'
+                          ? attachment.error ?? 'Upload failed'
+                          : 'Ready'}
+                      </p>
+                    </div>
+                    <button
+                      type='button'
+                      onClick={() => removeAttachment(attachment.id)}
+                      disabled={attachment.status === 'uploading' || isRunning}
+                      className='text-[var(--panel-muted)] hover:text-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className='flex flex-wrap items-center gap-3'>
+            <input
+              ref={fileInputRef}
+              type='file'
+              accept='image/*'
+              multiple
+              className='hidden'
+              onChange={handleFilesSelected}
+            />
+            <button
+              type='button'
+              onClick={handleAttachClick}
+              disabled={isRunning}
+              className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-xs text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
+            >
+              Attach image
+            </button>
             <button
               type='button'
               onClick={runAgent}
-              disabled={isRunning}
+              disabled={isRunning || hasPendingUploads}
               className='rounded-md bg-[var(--accent-primary)] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:bg-[var(--panel-muted)]'
             >
               {isRunning ? 'Running…' : 'Run Codex'}

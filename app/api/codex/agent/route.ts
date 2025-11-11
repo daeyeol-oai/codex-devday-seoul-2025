@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 import { NextRequest } from 'next/server'
 
 import { error, methodNotAllowed } from '@/lib/server/http'
@@ -11,15 +13,18 @@ import type {
   ItemStartedEvent,
   ItemUpdatedEvent,
   ItemCompletedEvent,
+  Input,
 } from '@openai/codex-sdk'
 
 export const runtime = 'nodejs'
 
 type RunPayload = {
   prompt: string
+  images?: string[]
 }
 
 const encoder = new TextEncoder()
+const WORKSPACE_ROOT = process.cwd()
 
 type StreamEmitter = {
   send: (event: string, data: unknown) => void
@@ -187,11 +192,49 @@ function parsePayload(body: unknown): RunPayload {
   if (!body || typeof body !== 'object') {
     throw new Error('Request body must be an object')
   }
-  const { prompt } = body as RunPayload
-  if (typeof prompt !== 'string' || prompt.trim().length === 0) {
+  const record = body as Record<string, unknown>
+  const rawPrompt = record.prompt
+  if (typeof rawPrompt !== 'string' || rawPrompt.trim().length === 0) {
     throw new Error('Prompt is required')
   }
-  return { prompt: prompt.trim() }
+
+  const prompt = rawPrompt.trim()
+  const rawImages = record.images
+  let images: string[] | undefined
+  if (Array.isArray(rawImages)) {
+    const entries = rawImages
+      .filter((value): value is string => typeof value === 'string')
+      .map((value) => value.trim())
+      .filter(Boolean)
+    if (entries.length > 0) {
+      images = entries
+    }
+  }
+
+  return images ? { prompt, images } : { prompt }
+}
+
+function createThreadInput(prompt: string, images: string[]): Input {
+  if (!images.length) {
+    return prompt
+  }
+
+  const items = [
+    { type: 'text' as const, text: prompt },
+    ...images.map((imagePath) => ({
+      type: 'local_image' as const,
+      path: resolveImagePath(imagePath),
+    })),
+  ]
+
+  return items
+}
+
+function resolveImagePath(imagePath: string) {
+  const normalized = imagePath.trim()
+  if (!normalized) return WORKSPACE_ROOT
+  const absolute = path.isAbsolute(normalized) ? normalized : path.join(WORKSPACE_ROOT, normalized)
+  return path.normalize(absolute)
 }
 
 export async function POST(request: NextRequest) {
@@ -214,7 +257,8 @@ export async function POST(request: NextRequest) {
         let finalResponse: string | null = null
 
         try {
-          const { events } = await thread.runStreamed(payload.prompt)
+          const input = createThreadInput(payload.prompt, payload.images ?? [])
+          const { events } = await thread.runStreamed(input)
           for await (const event of events) {
             if (emitter.isClosed()) break
             if (
