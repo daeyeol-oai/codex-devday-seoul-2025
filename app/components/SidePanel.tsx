@@ -52,6 +52,9 @@ type Attachment = {
 const DEFAULT_PRIMARY = '#2563eb'
 const DEFAULT_ACCENT = '#38bdf8'
 const COLOR_HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/
+const ATTACHMENT_PROMPT_TEMPLATE =
+  'Refer to the attached image. If annotation is provided in red pen or sticky note, follow those instructions.'
+
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -166,6 +169,8 @@ export default function SidePanel() {
 
   const controllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const hasAppliedAttachmentPromptRef = useRef(false)
+
 
   const [primary, setPrimary] = useState(DEFAULT_PRIMARY)
   const [accent, setAccent] = useState(DEFAULT_ACCENT)
@@ -482,6 +487,17 @@ export default function SidePanel() {
     }
   }, [])
 
+  useEffect(() => {
+    if (attachments.length === 0) {
+      hasAppliedAttachmentPromptRef.current = false
+      return
+    }
+    if (!hasAppliedAttachmentPromptRef.current) {
+      setPrompt(ATTACHMENT_PROMPT_TEMPLATE)
+      hasAppliedAttachmentPromptRef.current = true
+    }
+  }, [attachments])
+  
   useEffect(() => {
     const styles = getComputedStyle(document.documentElement)
     setPrimary((prev) => normaliseColourToken(styles.getPropertyValue('--accent-primary'), prev))
