@@ -17,3 +17,8 @@ _Last reset: 2025-11-12. Previous snapshot archived in docs/plan-history-2025111
 
 ### Codex upload storage
 - [x] Move upload persistence to `public/codex-run/<uuid>` and update APIs/ignore lists so Codex and the UI read from the new location.
+
+### Inpainting workflow
+- [x] Add an “Inpainting” entry point beside the existing upload/run buttons in `SidePanel`, capture the current viewport via `html-to-image`, and open a fullscreen overlay.
+- [x] Build the overlay editor with `react-konva` so users can draw thick red pen strokes, drag speech-bubble sticky notes (with movable tails), define a crop box, undo edits, and cancel/done actions.
+- [x] When a user hits Done, export the edited region (respecting the crop) to PNG, pipe it through the existing attachment upload flow, and surface it in the attachment list just like manual uploads.

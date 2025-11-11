@@ -1,6 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { toPng } from 'html-to-image'
+
+import InpaintingOverlay from './InpaintingOverlay'
 
 type PlanItem = {
   id: string
@@ -166,6 +169,10 @@ export default function SidePanel() {
   const [usage, setUsage] = useState<Usage | null>(null)
   const [snapshotAvailable, setSnapshotAvailable] = useState(false)
   const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [isInpaintingOpen, setIsInpaintingOpen] = useState(false)
+  const [inpaintingImage, setInpaintingImage] = useState<string | null>(null)
+  const [inpaintingSize, setInpaintingSize] = useState<{ width: number; height: number } | null>(null)
+  const [isCapturing, setIsCapturing] = useState(false)
 
   const controllerRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -236,29 +243,34 @@ export default function SidePanel() {
     }
   }, [])
 
+  const addAttachmentFromFile = useCallback(
+    (file: File) => {
+      const id =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      const attachment: Attachment = {
+        id,
+        name: file.name || 'image',
+        status: 'uploading',
+      }
+      setAttachments((prev) => [...prev, attachment])
+      void uploadAttachment(id, file)
+    },
+    [uploadAttachment],
+  )
+
   const handleFilesSelected = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const fileList = event.target.files
       if (!fileList || fileList.length === 0) return
 
-      const selections: Attachment[] = []
       Array.from(fileList).forEach((file) => {
-        const id =
-          typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-            ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-        const attachment: Attachment = {
-          id,
-          name: file.name || 'image',
-          status: 'uploading',
-        }
-        selections.push(attachment)
-        void uploadAttachment(id, file)
+        addAttachmentFromFile(file)
       })
-      setAttachments((prev) => [...prev, ...selections])
       event.target.value = ''
     },
-    [uploadAttachment],
+    [addAttachmentFromFile],
   )
 
   const handleAttachClick = useCallback(() => {
@@ -268,6 +280,45 @@ export default function SidePanel() {
   const removeAttachment = useCallback((attachmentId: string) => {
     setAttachments((prev) => prev.filter((item) => item.id !== attachmentId))
   }, [])
+
+  const handleOverlayClose = useCallback(() => {
+    setIsInpaintingOpen(false)
+    setInpaintingImage(null)
+    setInpaintingSize(null)
+  }, [])
+
+  const handleOverlayComplete = useCallback(
+    (file: File) => {
+      addAttachmentFromFile(file)
+    },
+    [addAttachmentFromFile],
+  )
+
+  const handleStartInpainting = useCallback(async () => {
+    if (typeof document === 'undefined') return
+    try {
+      setIsCapturing(true)
+      const width = window.innerWidth
+      const height = window.innerHeight
+      const node = document.body
+      const dataUrl = await toPng(node, {
+        cacheBust: true,
+        width,
+        height,
+        style: {
+          transform: 'none',
+        },
+      })
+      setInpaintingImage(dataUrl)
+      setInpaintingSize({ width, height })
+      setIsInpaintingOpen(true)
+    } catch (err) {
+      console.error('Failed to capture viewport for inpainting', err)
+      setErrorMessage('화면 캡처에 실패했어요. 다시 시도해 주세요.')
+    } finally {
+      setIsCapturing(false)
+    }
+  }, [setErrorMessage])
 
   const handleEvent = useCallback(
     (event: string, payload: unknown) => {
@@ -623,14 +674,15 @@ export default function SidePanel() {
   const planComplete = useMemo(() => planItems.filter((item) => item.completed).length, [planItems])
 
   return (
-    <aside className='hidden w-[360px] border-l border-[var(--panel-border)] bg-[var(--panel-background)] text-[var(--panel-foreground)] lg:flex lg:flex-col'>
-      <div className='border-b border-[var(--panel-border)] px-6 py-5'>
-        <p className='text-xs uppercase tracking-[0.3em] text-[var(--panel-muted)]'>Builder</p>
-        <h2 className='text-lg font-semibold'>Codex Agent</h2>
-        <p className='mt-2 text-xs text-[var(--panel-muted)]'>Run instructions, tweak theme colours, or undo the latest snapshot.</p>
-      </div>
+    <>
+      <aside className='hidden w-[360px] border-l border-[var(--panel-border)] bg-[var(--panel-background)] text-[var(--panel-foreground)] lg:flex lg:flex-col'>
+        <div className='border-b border-[var(--panel-border)] px-6 py-5'>
+          <p className='text-xs uppercase tracking-[0.3em] text-[var(--panel-muted)]'>Builder</p>
+          <h2 className='text-lg font-semibold'>Codex Agent</h2>
+          <p className='mt-2 text-xs text-[var(--panel-muted)]'>Run instructions, tweak theme colours, or undo the latest snapshot.</p>
+        </div>
 
-      <div className='flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm'>
+        <div className='flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm'>
         <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
           <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>Run prompt</h3>
           <textarea
@@ -674,7 +726,7 @@ export default function SidePanel() {
               </ul>
             </div>
           ) : null}
-          <div className='flex flex-wrap items-center gap-3'>
+          <div className='flex items-center gap-3'>
             <input
               ref={fileInputRef}
               type='file'
@@ -685,11 +737,19 @@ export default function SidePanel() {
             />
             <button
               type='button'
-              onClick={handleAttachClick}
-              disabled={isRunning}
+              onClick={handleStartInpainting}
+              disabled={isRunning || isCapturing || isInpaintingOpen}
               className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-xs text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
             >
-              Attach image
+              {isCapturing ? 'Capturing…' : 'Inpaint'}
+            </button>
+            <button
+              type='button'
+              onClick={handleAttachClick}
+              disabled={isRunning || isCapturing}
+              className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-xs text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
+            >
+              Upload
             </button>
             <button
               type='button'
@@ -697,7 +757,7 @@ export default function SidePanel() {
               disabled={isRunning || hasPendingUploads}
               className='rounded-md bg-[var(--accent-primary)] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:bg-[var(--panel-muted)]'
             >
-              {isRunning ? 'Running…' : 'Run Codex'}
+              {isRunning ? 'Running…' : 'Run'}
             </button>
             {isRunning ? (
               <button
@@ -847,7 +907,17 @@ export default function SidePanel() {
             {undoMessage ? <span className='text-[10px] text-[var(--panel-muted)]'>{undoMessage}</span> : null}
           </div>
         </section>
-      </div>
-    </aside>
+        </div>
+      </aside>
+      {isInpaintingOpen && inpaintingImage && inpaintingSize ? (
+        <InpaintingOverlay
+          screenshot={inpaintingImage}
+          stageWidth={inpaintingSize.width}
+          stageHeight={inpaintingSize.height}
+          onCancel={handleOverlayClose}
+          onComplete={handleOverlayComplete}
+        />
+      ) : null}
+    </>
   )
 }
