@@ -1,0 +1,263 @@
+{
+  "runId": "images-20251112052516-2udkn4",
+  "prompt": "같이 레고블럭 쌓으면서 노는 1인칭 시점 영상. 최고화질의 영화",
+  "model": "sora-2",
+  "videoId": "video_69141aab2e608193afb11e83f8c9a5340deb75d459cab1f7",
+  "status": "completed",
+  "progress": 100,
+  "seconds": "8",
+  "size": "1280x720",
+  "startedAt": "2025-11-12T05:27:07.443Z",
+  "updatedAt": "2025-11-12T05:29:17.000Z",
+  "progressFile": "videos/7748ecdd/sora-progress-7748ecdd.json",
+  "videoFile": "videos/7748ecdd/video-7748ecdd.mp4",
+  "history": [
+    {
+      "status": "queued",
+      "progress": 0,
+      "timestamp": "2025-11-12T05:27:07.443Z"
+    },
+    {
+      "status": "queued",
+      "progress": 0,
+      "timestamp": "2025-11-12T05:27:07.000Z"
+    },
+    {
+      "status": "queued",
+      "progress": 0,
+      "timestamp": "2025-11-12T05:27:13.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:16.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:19.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:22.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:25.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:28.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:31.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:33.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:37.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T05:27:39.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T05:27:43.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T05:27:45.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T05:27:48.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T05:27:51.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T05:27:54.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 52,
+      "timestamp": "2025-11-12T05:27:57.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 52,
+      "timestamp": "2025-11-12T05:28:00.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 52,
+      "timestamp": "2025-11-12T05:28:02.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 64,
+      "timestamp": "2025-11-12T05:28:05.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 64,
+      "timestamp": "2025-11-12T05:28:08.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 64,
+      "timestamp": "2025-11-12T05:28:11.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 64,
+      "timestamp": "2025-11-12T05:28:13.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 74,
+      "timestamp": "2025-11-12T05:28:16.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 74,
+      "timestamp": "2025-11-12T05:28:19.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 74,
+      "timestamp": "2025-11-12T05:28:22.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 84,
+      "timestamp": "2025-11-12T05:28:25.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 84,
+      "timestamp": "2025-11-12T05:28:28.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 84,
+      "timestamp": "2025-11-12T05:28:31.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 84,
+      "timestamp": "2025-11-12T05:28:33.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:36.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:39.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:41.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:44.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:47.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:50.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:53.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:55.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T05:28:58.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:01.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:04.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:07.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:11.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:14.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T05:29:17.000Z"
+    },
+    {
+      "status": "completed",
+      "progress": 100,
+      "timestamp": "2025-11-12T05:29:19.000Z"
+    },
+    {
+      "status": "completed",
+      "progress": 100,
+      "timestamp": "2025-11-12T05:29:17.000Z"
+    }
+  ],
+  "assets": {
+    "video": "/outputs/images-20251112052516-2udkn4/videos/7748ecdd/video-7748ecdd.mp4",
+    "reference": "/outputs/images-20251112052516-2udkn4/videos/7748ecdd/reference.png",
+    "images": [
+      "/outputs/images-20251112052516-2udkn4/images/image-1.png"
+    ]
+  }
+}
