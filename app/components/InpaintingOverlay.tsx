@@ -140,18 +140,26 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
   const [isExporting, setIsExporting] = useState(false)
   const [overlayError, setOverlayError] = useState<string | null>(null)
   const [textEditor, setTextEditor] = useState<NoteEditorState | null>(null)
+  const [isCropPending, setIsCropPending] = useState(false)
+  const [cropControls, setCropControls] = useState<{ x: number; y: number } | null>(null)
+  const [cropStatus, setCropStatus] = useState<string | null>(null)
+  const [baseImageSrc, setBaseImageSrc] = useState(screenshot)
+  const [canvasSize, setCanvasSize] = useState({ width: stageWidth, height: stageHeight })
   const activeEditorId = textEditor?.noteId ?? null
 
   const historyRef = useRef<EditorState[]>([createInitialState()])
   const historyIndexRef = useRef(0)
   const editorStateRef = useRef(editorState)
   const stageRef = useRef<Konva.Stage | null>(null)
+  const backgroundLayerRef = useRef<Konva.Layer | null>(null)
   const isDrawingRef = useRef(false)
   const cropStartRef = useRef<{ x: number; y: number } | null>(null)
   const stageWrapperRef = useRef<HTMLDivElement | null>(null)
   const textEditorRef = useRef<HTMLTextAreaElement | null>(null)
+  const isCropPendingRef = useRef(false)
+  const cropStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const image = useScreenshotImage(screenshot)
+  const image = useScreenshotImage(baseImageSrc)
 
   useEffect(() => {
     const initial = createInitialState()
@@ -163,7 +171,12 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
     setSelectedNoteId(null)
     setActiveTool('pen')
     setTextEditor(null)
-  }, [screenshot])
+    setIsCropPending(false)
+    setCropControls(null)
+    setCropStatus(null)
+    setBaseImageSrc(screenshot)
+    setCanvasSize({ width: stageWidth, height: stageHeight })
+  }, [screenshot, stageWidth, stageHeight])
 
   useEffect(() => {
     editorStateRef.current = editorState
@@ -177,11 +190,29 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
   }, [activeEditorId])
 
   useEffect(() => {
+    isCropPendingRef.current = isCropPending
+  }, [isCropPending])
+
+  useEffect(() => {
     const originalOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = originalOverflow
+      if (cropStatusTimeoutRef.current) {
+        clearTimeout(cropStatusTimeoutRef.current)
+      }
     }
+  }, [])
+
+  const showCropStatus = useCallback((message: string) => {
+    if (cropStatusTimeoutRef.current) {
+      clearTimeout(cropStatusTimeoutRef.current)
+    }
+    setCropStatus(message)
+    cropStatusTimeoutRef.current = setTimeout(() => {
+      setCropStatus(null)
+      cropStatusTimeoutRef.current = null
+    }, 2000)
   }, [])
 
   const applyEditorState = useCallback(
@@ -222,24 +253,66 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
     setEditorState(snapshot)
   }, [])
 
-  const openEditor = useCallback(
-    (note: Sticky) => {
-      if (!stageRef.current || !stageWrapperRef.current) return
+  const getWrapperPoint = useCallback(
+    (coords: { x: number; y: number }) => {
+      if (!stageRef.current || !stageWrapperRef.current) return null
       const stageRect = stageRef.current.container().getBoundingClientRect()
       const wrapperRect = stageWrapperRef.current.getBoundingClientRect()
-      const editorX = stageRect.left - wrapperRect.left + note.x
-      const editorY = stageRect.top - wrapperRect.top + note.y
+      return {
+        x: stageRect.left - wrapperRect.left + coords.x,
+        y: stageRect.top - wrapperRect.top + coords.y,
+      }
+    },
+    [],
+  )
+
+  const updateCropControlsPosition = useCallback(() => {
+    const crop = editorStateRef.current.crop
+    if (crop) {
+      const anchor = getWrapperPoint({
+        x: crop.x + crop.width,
+        y: crop.y,
+      })
+      if (anchor) {
+        setCropControls(anchor)
+        return
+      }
+    }
+    setCropControls(null)
+  }, [getWrapperPoint])
+
+  useEffect(() => {
+    updateCropControlsPosition()
+  }, [updateCropControlsPosition, editorState.crop, canvasSize])
+
+  useEffect(() => {
+    const container = stageWrapperRef.current
+    if (!container) return
+    const handleScroll = () => updateCropControlsPosition()
+    const handleResize = () => updateCropControlsPosition()
+    container.addEventListener('scroll', handleScroll)
+    window.addEventListener('resize', handleResize)
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [updateCropControlsPosition])
+
+  const openEditor = useCallback(
+    (note: Sticky) => {
+      const origin = getWrapperPoint({ x: note.x, y: note.y })
+      if (!origin) return
       setSelectedNoteId(note.id)
       setTextEditor({
         noteId: note.id,
         value: note.text,
-        x: editorX,
-        y: editorY,
+        x: origin.x,
+        y: origin.y,
         width: note.width,
         height: note.height,
       })
     },
-    [],
+    [getWrapperPoint],
   )
 
   const handleEditorChange = useCallback((value: string) => {
@@ -344,6 +417,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
 
       if (activeTool === 'crop') {
         cropStartRef.current = point
+        setIsCropPending(true)
         applyEditorState((prev) => ({
           ...prev,
           crop: { x: point.x, y: point.y, width: 0, height: 0 },
@@ -428,6 +502,62 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
     [applyEditorState, commitEditor, textEditor],
   )
 
+  const confirmCrop = useCallback(() => {
+    const crop = editorStateRef.current.crop
+    if (!crop || crop.width < 2 || crop.height < 2) {
+      showCropStatus('Select a larger area before applying crop.')
+      return
+    }
+    const cropX = Math.max(0, Math.floor(crop.x))
+    const cropY = Math.max(0, Math.floor(crop.y))
+    const maxWidth = Math.max(1, Math.floor(crop.width))
+    const maxHeight = Math.max(1, Math.floor(crop.height))
+    const nextWidth = Math.min(maxWidth, Math.max(1, canvasSize.width - cropX))
+    const nextHeight = Math.min(maxHeight, Math.max(1, canvasSize.height - cropY))
+    const layerCanvas = backgroundLayerRef.current?.toCanvas({
+      x: cropX,
+      y: cropY,
+      width: nextWidth,
+      height: nextHeight,
+      pixelRatio: 1,
+    })
+    if (!layerCanvas) {
+      showCropStatus('Unable to crop this image.')
+      return
+    }
+    const nextSrc = layerCanvas.toDataURL('image/png')
+    setBaseImageSrc(nextSrc)
+    setCanvasSize({ width: nextWidth, height: nextHeight })
+    applyEditorState(
+      (prev) => ({
+        ...prev,
+        lines: prev.lines.map((line) => ({
+          ...line,
+          points: line.points.map((value, index) => (index % 2 === 0 ? value - cropX : value - cropY)),
+        })),
+        notes: prev.notes.map((note) => ({
+          ...note,
+          x: note.x - cropX,
+          y: note.y - cropY,
+        })),
+        crop: null,
+      }),
+      { commit: true },
+    )
+    setIsCropPending(false)
+    setCropControls(null)
+    showCropStatus('Crop applied. Canvas resized.')
+  }, [applyEditorState, canvasSize.height, canvasSize.width, showCropStatus])
+
+  const cancelCrop = useCallback(() => {
+    setIsCropPending(false)
+    applyEditorState((prev) => ({
+      ...prev,
+      crop: null,
+    }))
+    showCropStatus('Crop cancelled.')
+  }, [applyEditorState, showCropStatus])
+
   const handleDone = useCallback(async () => {
     if (!stageRef.current) return
     setOverlayError(null)
@@ -437,7 +567,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
         commitEditor(true)
       }
       const stage = stageRef.current
-      const crop = editorStateRef.current.crop
+      const crop = isCropPendingRef.current ? null : editorStateRef.current.crop
       const hasCrop = crop && crop.width > 0 && crop.height > 0
       const dataUrl = stage.toDataURL({
         mimeType: 'image/png',
@@ -490,8 +620,8 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
           {image ? (
             <>
               <Stage
-                width={stageWidth}
-                height={stageHeight}
+                width={canvasSize.width}
+                height={canvasSize.height}
                 ref={stageRef}
                 className='max-h-full max-w-full'
                 onPointerDown={handlePointerDown}
@@ -500,8 +630,8 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
                 onPointerLeave={handlePointerUp}
                 style={{ cursor: overlayCursor }}
               >
-                <Layer listening={false}>
-                  <KonvaImage image={image} width={stageWidth} height={stageHeight} listening={false} />
+                <Layer listening={false} ref={backgroundLayerRef}>
+                  <KonvaImage image={image} width={canvasSize.width} height={canvasSize.height} listening={false} />
                 </Layer>
                 <Layer>
                   {editorState.lines.map((line) => (
@@ -591,6 +721,38 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
                     zIndex: 10,
                   }}
                 />
+              ) : null}
+              {editorState.crop && cropControls && isCropPending ? (
+                <div
+                  className='absolute flex gap-1 text-white'
+                  style={{
+                    left: `${cropControls.x + 8}px`,
+                    top: `${cropControls.y - 12}px`,
+                    zIndex: 12,
+                  }}
+                >
+                  <button
+                    type='button'
+                    onClick={confirmCrop}
+                    aria-label='Apply crop'
+                    className='flex h-6 w-6 items-center justify-center rounded-md bg-slate-900/70 text-white hover:bg-slate-900/80'
+                  >
+                    <Check className='h-3.5 w-3.5' />
+                  </button>
+                  <button
+                    type='button'
+                    onClick={cancelCrop}
+                    aria-label='Cancel crop'
+                    className='flex h-6 w-6 items-center justify-center rounded-md bg-slate-900/70 text-white hover:bg-slate-900/80'
+                  >
+                    <X className='h-3.5 w-3.5' />
+                  </button>
+                </div>
+              ) : null}
+              {cropStatus ? (
+                <div className='absolute left-4 top-4 rounded-full bg-slate-900/80 px-3 py-1 text-xs text-white shadow-lg'>
+                  {cropStatus}
+                </div>
               ) : null}
             </>
           ) : (

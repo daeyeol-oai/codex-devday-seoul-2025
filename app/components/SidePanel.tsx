@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { toPng } from 'html-to-image'
+import { ImageUp, Paintbrush } from 'lucide-react'
 
 import InpaintingOverlay from './InpaintingOverlay'
 
@@ -298,10 +299,10 @@ export default function SidePanel() {
     if (typeof document === 'undefined') return
     try {
       setIsCapturing(true)
-      const width = window.innerWidth
-      const height = window.innerHeight
-      const node = document.body
-      const dataUrl = await toPng(node, {
+      const target = document.documentElement
+      const width = Math.max(target.scrollWidth, target.clientWidth)
+      const height = Math.max(target.scrollHeight, target.clientHeight)
+      const dataUrl = await toPng(target, {
         cacheBust: true,
         width,
         height,
@@ -739,17 +740,25 @@ export default function SidePanel() {
               type='button'
               onClick={handleStartInpainting}
               disabled={isRunning || isCapturing || isInpaintingOpen}
-              className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-xs text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
+              aria-label='Open inpainting overlay'
+              title='Inpaint'
+              className='rounded-md border border-[var(--panel-border)] p-2 text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
             >
-              {isCapturing ? 'Capturing…' : 'Inpaint'}
+              {isCapturing ? (
+                <span className='text-[10px] uppercase tracking-wide'>…</span>
+              ) : (
+                <Paintbrush className='h-4 w-4' />
+              )}
             </button>
             <button
               type='button'
               onClick={handleAttachClick}
               disabled={isRunning || isCapturing}
-              className='rounded-md border border-[var(--panel-border)] px-3 py-2 text-xs text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
+              aria-label='Upload reference image'
+              title='Upload'
+              className='rounded-md border border-[var(--panel-border)] p-2 text-[var(--panel-foreground)] hover:border-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:opacity-50'
             >
-              Upload
+              <ImageUp className='h-4 w-4' />
             </button>
             <button
               type='button'
@@ -757,7 +766,7 @@ export default function SidePanel() {
               disabled={isRunning || hasPendingUploads}
               className='rounded-md bg-[var(--accent-primary)] px-4 py-2 text-xs font-semibold text-white shadow hover:bg-[var(--accent-secondary)] disabled:cursor-not-allowed disabled:bg-[var(--panel-muted)]'
             >
-              {isRunning ? 'Running…' : 'Run'}
+              {isRunning ? 'Running…' : 'Run Codex'}
             </button>
             {isRunning ? (
               <button
