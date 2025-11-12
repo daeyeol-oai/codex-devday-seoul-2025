@@ -1,253 +1,258 @@
 {
-  "runId": "images-20251112052516-2udkn4",
+  "runId": "images-20251112141720-hau1yl",
   "prompt": "이 강아지인형이 살아있는듯이 함께 같이 레고블럭 쌓으면서 노는 1인칭 시점 영상. 최고화질의 영화",
   "model": "sora-2",
-  "videoId": "video_691435f21864819887ca6b991cec5ef30c928e78b6ed1f1a",
+  "videoId": "video_691499ebbb8881989e9687010ca66550083d0ec32519e62b",
   "status": "completed",
   "progress": 100,
   "seconds": "8",
   "size": "1280x720",
-  "startedAt": "2025-11-12T07:23:30.146Z",
-  "updatedAt": "2025-11-12T07:25:29.000Z",
-  "progressFile": "videos/64fb5c36/sora-progress-64fb5c36.json",
-  "videoFile": "videos/64fb5c36/video-64fb5c36.mp4",
+  "startedAt": "2025-11-12T14:30:04.220Z",
+  "updatedAt": "2025-11-12T14:32:06.000Z",
+  "progressFile": "videos/cd1e9f0a/sora-progress-cd1e9f0a.json",
+  "videoFile": "videos/cd1e9f0a/video-cd1e9f0a.mp4",
   "history": [
     {
       "status": "queued",
       "progress": 0,
-      "timestamp": "2025-11-12T07:23:30.146Z"
+      "timestamp": "2025-11-12T14:30:04.220Z"
     },
     {
       "status": "queued",
       "progress": 0,
-      "timestamp": "2025-11-12T07:23:30.000Z"
+      "timestamp": "2025-11-12T14:30:03.000Z"
     },
     {
       "status": "queued",
       "progress": 0,
-      "timestamp": "2025-11-12T07:23:35.000Z"
+      "timestamp": "2025-11-12T14:30:07.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:38.000Z"
+      "timestamp": "2025-11-12T14:30:10.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:41.000Z"
+      "timestamp": "2025-11-12T14:30:13.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:44.000Z"
+      "timestamp": "2025-11-12T14:30:16.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:47.000Z"
+      "timestamp": "2025-11-12T14:30:20.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:50.000Z"
+      "timestamp": "2025-11-12T14:30:22.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:52.000Z"
+      "timestamp": "2025-11-12T14:30:25.000Z"
     },
     {
       "status": "in_progress",
       "progress": 10,
-      "timestamp": "2025-11-12T07:23:55.000Z"
-    },
-    {
-      "status": "in_progress",
-      "progress": 10,
-      "timestamp": "2025-11-12T07:23:58.000Z"
+      "timestamp": "2025-11-12T14:30:30.000Z"
     },
     {
       "status": "in_progress",
       "progress": 40,
-      "timestamp": "2025-11-12T07:24:01.000Z"
+      "timestamp": "2025-11-12T14:30:33.000Z"
     },
     {
       "status": "in_progress",
       "progress": 40,
-      "timestamp": "2025-11-12T07:24:04.000Z"
+      "timestamp": "2025-11-12T14:30:36.000Z"
     },
     {
       "status": "in_progress",
       "progress": 40,
-      "timestamp": "2025-11-12T07:24:07.000Z"
+      "timestamp": "2025-11-12T14:30:38.000Z"
     },
     {
       "status": "in_progress",
       "progress": 40,
-      "timestamp": "2025-11-12T07:24:09.000Z"
+      "timestamp": "2025-11-12T14:30:41.000Z"
     },
     {
       "status": "in_progress",
       "progress": 51,
-      "timestamp": "2025-11-12T07:24:12.000Z"
+      "timestamp": "2025-11-12T14:30:44.000Z"
     },
     {
       "status": "in_progress",
       "progress": 51,
-      "timestamp": "2025-11-12T07:24:14.000Z"
+      "timestamp": "2025-11-12T14:30:46.000Z"
     },
     {
       "status": "in_progress",
       "progress": 51,
-      "timestamp": "2025-11-12T07:24:17.000Z"
-    },
-    {
-      "status": "in_progress",
-      "progress": 51,
-      "timestamp": "2025-11-12T07:24:20.000Z"
+      "timestamp": "2025-11-12T14:30:51.000Z"
     },
     {
       "status": "in_progress",
       "progress": 63,
-      "timestamp": "2025-11-12T07:24:22.000Z"
+      "timestamp": "2025-11-12T14:30:55.000Z"
     },
     {
       "status": "in_progress",
       "progress": 63,
-      "timestamp": "2025-11-12T07:24:25.000Z"
+      "timestamp": "2025-11-12T14:30:57.000Z"
     },
     {
       "status": "in_progress",
       "progress": 63,
-      "timestamp": "2025-11-12T07:24:27.000Z"
+      "timestamp": "2025-11-12T14:31:00.000Z"
     },
     {
       "status": "in_progress",
       "progress": 63,
-      "timestamp": "2025-11-12T07:24:30.000Z"
+      "timestamp": "2025-11-12T14:31:03.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 74,
-      "timestamp": "2025-11-12T07:24:33.000Z"
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:05.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 74,
-      "timestamp": "2025-11-12T07:24:36.000Z"
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:08.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 74,
-      "timestamp": "2025-11-12T07:24:39.000Z"
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:10.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 74,
-      "timestamp": "2025-11-12T07:24:41.000Z"
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:13.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 84,
-      "timestamp": "2025-11-12T07:24:44.000Z"
+      "progress": 83,
+      "timestamp": "2025-11-12T14:31:16.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 84,
-      "timestamp": "2025-11-12T07:24:47.000Z"
+      "progress": 83,
+      "timestamp": "2025-11-12T14:31:18.000Z"
     },
     {
       "status": "in_progress",
-      "progress": 84,
-      "timestamp": "2025-11-12T07:24:50.000Z"
-    },
-    {
-      "status": "in_progress",
-      "progress": 89,
-      "timestamp": "2025-11-12T07:24:52.000Z"
+      "progress": 83,
+      "timestamp": "2025-11-12T14:31:21.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:24:55.000Z"
+      "timestamp": "2025-11-12T14:31:23.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:24:58.000Z"
+      "timestamp": "2025-11-12T14:31:26.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:01.000Z"
+      "timestamp": "2025-11-12T14:31:29.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:04.000Z"
+      "timestamp": "2025-11-12T14:31:31.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:06.000Z"
+      "timestamp": "2025-11-12T14:31:34.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:09.000Z"
+      "timestamp": "2025-11-12T14:31:36.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:12.000Z"
+      "timestamp": "2025-11-12T14:31:39.000Z"
     },
     {
       "status": "in_progress",
       "progress": 89,
-      "timestamp": "2025-11-12T07:25:14.000Z"
+      "timestamp": "2025-11-12T14:31:42.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:44.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:47.000Z"
     },
     {
       "status": "in_progress",
       "progress": 99,
-      "timestamp": "2025-11-12T07:25:17.000Z"
+      "timestamp": "2025-11-12T14:31:49.000Z"
     },
     {
       "status": "in_progress",
       "progress": 99,
-      "timestamp": "2025-11-12T07:25:20.000Z"
+      "timestamp": "2025-11-12T14:31:52.000Z"
     },
     {
       "status": "in_progress",
       "progress": 99,
-      "timestamp": "2025-11-12T07:25:22.000Z"
+      "timestamp": "2025-11-12T14:31:55.000Z"
     },
     {
       "status": "in_progress",
       "progress": 99,
-      "timestamp": "2025-11-12T07:25:25.000Z"
+      "timestamp": "2025-11-12T14:31:57.000Z"
     },
     {
       "status": "in_progress",
       "progress": 99,
-      "timestamp": "2025-11-12T07:25:28.000Z"
+      "timestamp": "2025-11-12T14:32:00.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:02.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:05.000Z"
     },
     {
       "status": "completed",
       "progress": 100,
-      "timestamp": "2025-11-12T07:25:30.000Z"
+      "timestamp": "2025-11-12T14:32:07.000Z"
     },
     {
       "status": "completed",
       "progress": 100,
-      "timestamp": "2025-11-12T07:25:29.000Z"
+      "timestamp": "2025-11-12T14:32:06.000Z"
     }
   ],
   "assets": {
-    "video": "/outputs/images-20251112052516-2udkn4/videos/64fb5c36/video-64fb5c36.mp4",
-    "reference": "/outputs/images-20251112052516-2udkn4/videos/64fb5c36/reference.png",
+    "video": "/outputs/images-20251112141720-hau1yl/videos/cd1e9f0a/video-cd1e9f0a.mp4",
+    "reference": "/outputs/images-20251112141720-hau1yl/videos/cd1e9f0a/reference.png",
     "images": [
-      "/outputs/images-20251112052516-2udkn4/images/image-1.png"
+      "/outputs/images-20251112141720-hau1yl/images/image-1.png"
     ]
   }
 }

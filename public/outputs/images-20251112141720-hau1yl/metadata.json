@@ -1,0 +1,81 @@
+{
+  "runId": "images-20251112141720-hau1yl",
+  "createdAt": "2025-11-12T14:17:20.117Z",
+  "prompt": "가슴에 OpenAI Blossom 마크가 조그맣게 자수로 놓아줘",
+  "sketch": {
+    "fileName": "image.png",
+    "url": "/outputs/images-20251112141720-hau1yl/input/image.png"
+  },
+  "images": [
+    {
+      "id": "images-20251112141720-hau1yl-img-1",
+      "fileName": "image-1.png",
+      "url": "/outputs/images-20251112141720-hau1yl/images/image-1.png",
+      "width": 1536,
+      "height": 1024,
+      "createdAt": "2025-11-12T14:17:20.117Z",
+      "model": "gpt-image-1-mini",
+      "size": "1536x1024"
+    },
+    {
+      "id": "images-20251112141720-hau1yl-img-2",
+      "fileName": "image-2.png",
+      "url": "/outputs/images-20251112141720-hau1yl/images/image-2.png",
+      "width": 1536,
+      "height": 1024,
+      "createdAt": "2025-11-12T14:17:20.117Z",
+      "model": "gpt-image-1-mini",
+      "size": "1536x1024"
+    },
+    {
+      "id": "images-20251112141720-hau1yl-img-3",
+      "fileName": "image-3.png",
+      "url": "/outputs/images-20251112141720-hau1yl/images/image-3.png",
+      "width": 1536,
+      "height": 1024,
+      "createdAt": "2025-11-12T14:17:20.117Z",
+      "model": "gpt-image-1-mini",
+      "size": "1536x1024"
+    },
+    {
+      "id": "images-20251112141720-hau1yl-img-4",
+      "fileName": "image-4.png",
+      "url": "/outputs/images-20251112141720-hau1yl/images/image-4.png",
+      "width": 1536,
+      "height": 1024,
+      "createdAt": "2025-11-12T14:17:20.117Z",
+      "model": "gpt-image-1-mini",
+      "size": "1536x1024"
+    }
+  ],
+  "model": "gpt-image-1-mini",
+  "usedReference": true,
+  "videos": [
+    {
+      "id": "cd1e9f0a",
+      "fileName": "video-cd1e9f0a.mp4",
+      "relativePath": "videos/cd1e9f0a/video-cd1e9f0a.mp4",
+      "url": "/outputs/images-20251112141720-hau1yl/videos/cd1e9f0a/video-cd1e9f0a.mp4",
+      "progressFile": "videos/cd1e9f0a/sora-progress-cd1e9f0a.json",
+      "seconds": "8",
+      "size": "1280x720",
+      "prompt": "이 강아지인형이 살아있는듯이 함께 같이 레고블럭 쌓으면서 노는 1인칭 시점 영상. 최고화질의 영화",
+      "createdAt": "2025-11-12T14:32:10.507Z",
+      "model": "sora-2",
+      "videoJobId": "video_691499ebbb8881989e9687010ca66550083d0ec32519e62b"
+    },
+    {
+      "id": "203a924c",
+      "fileName": "video-203a924c.mp4",
+      "relativePath": "videos/203a924c/video-203a924c.mp4",
+      "url": "/outputs/images-20251112141720-hau1yl/videos/203a924c/video-203a924c.mp4",
+      "progressFile": "videos/203a924c/sora-progress-203a924c.json",
+      "seconds": "8",
+      "size": "1280x720",
+      "prompt": "이 강아지인형이 살아있는듯이 함께 같이 레고블럭 쌓으면서 노는 1인칭 시점 영상. 최고화질의 영화",
+      "createdAt": "2025-11-12T14:32:33.240Z",
+      "model": "sora-2",
+      "videoJobId": "video_691499fce380819084c001563babe18207e036f64a2d65d3"
+    }
+  ]
+}

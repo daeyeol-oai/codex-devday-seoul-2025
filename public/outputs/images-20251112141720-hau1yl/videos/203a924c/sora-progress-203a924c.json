@@ -1,0 +1,278 @@
+{
+  "runId": "images-20251112141720-hau1yl",
+  "prompt": "이 강아지인형이 살아있는듯이 함께 같이 레고블럭 쌓으면서 노는 1인칭 시점 영상. 최고화질의 영화",
+  "model": "sora-2",
+  "videoId": "video_691499fce380819084c001563babe18207e036f64a2d65d3",
+  "status": "completed",
+  "progress": 100,
+  "seconds": "8",
+  "size": "1280x720",
+  "startedAt": "2025-11-12T14:30:20.986Z",
+  "updatedAt": "2025-11-12T14:32:29.000Z",
+  "progressFile": "videos/203a924c/sora-progress-203a924c.json",
+  "videoFile": "videos/203a924c/video-203a924c.mp4",
+  "history": [
+    {
+      "status": "queued",
+      "progress": 0,
+      "timestamp": "2025-11-12T14:30:20.986Z"
+    },
+    {
+      "status": "queued",
+      "progress": 0,
+      "timestamp": "2025-11-12T14:30:20.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 0,
+      "timestamp": "2025-11-12T14:30:23.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:26.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:29.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:31.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:33.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:37.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:39.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:42.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:45.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:47.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 10,
+      "timestamp": "2025-11-12T14:30:50.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T14:30:53.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T14:30:55.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T14:30:58.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 40,
+      "timestamp": "2025-11-12T14:31:01.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 51,
+      "timestamp": "2025-11-12T14:31:05.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 51,
+      "timestamp": "2025-11-12T14:31:07.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 51,
+      "timestamp": "2025-11-12T14:31:10.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 62,
+      "timestamp": "2025-11-12T14:31:12.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 62,
+      "timestamp": "2025-11-12T14:31:15.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 62,
+      "timestamp": "2025-11-12T14:31:17.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 62,
+      "timestamp": "2025-11-12T14:31:20.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:23.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:25.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:28.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 73,
+      "timestamp": "2025-11-12T14:31:30.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 82,
+      "timestamp": "2025-11-12T14:31:33.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 82,
+      "timestamp": "2025-11-12T14:31:36.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 82,
+      "timestamp": "2025-11-12T14:31:38.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 82,
+      "timestamp": "2025-11-12T14:31:41.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:44.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:46.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:49.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:52.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:54.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:31:57.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:32:00.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:32:03.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:32:05.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 89,
+      "timestamp": "2025-11-12T14:32:08.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:11.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:13.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:16.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:19.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:22.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:25.000Z"
+    },
+    {
+      "status": "in_progress",
+      "progress": 99,
+      "timestamp": "2025-11-12T14:32:28.000Z"
+    },
+    {
+      "status": "completed",
+      "progress": 100,
+      "timestamp": "2025-11-12T14:32:30.000Z"
+    },
+    {
+      "status": "completed",
+      "progress": 100,
+      "timestamp": "2025-11-12T14:32:29.000Z"
+    }
+  ],
+  "assets": {
+    "video": "/outputs/images-20251112141720-hau1yl/videos/203a924c/video-203a924c.mp4",
+    "reference": "/outputs/images-20251112141720-hau1yl/videos/203a924c/reference.png",
+    "images": [
+      "/outputs/images-20251112141720-hau1yl/images/image-4.png"
+    ]
+  }
+}
