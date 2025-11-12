@@ -193,22 +193,32 @@ export default function HomePage() {
       setSelectedImageId(mappedImages[0]?.id ?? null)
       const snapshot = payload.progress ? (payload.progress as VideoProgressSnapshot) : null
       if (payload.video) {
+        const promptFromSnapshot = snapshot?.prompt ?? ''
+        const metadataPrompt = payload.metadata?.prompt ?? ''
+        const resolvedPrompt = promptFromSnapshot || metadataPrompt
+
         setCachedVideoAsset({
           runId: payload.runId,
           fileName: payload.video.fileName,
           url: payload.video.url,
         })
         setCachedVideoProgress(snapshot)
-        const promptFromSnapshot = snapshot?.prompt ?? ''
-        const metadataPrompt = payload.metadata?.prompt ?? ''
-        setCachedVideoPrompt(promptFromSnapshot || metadataPrompt)
+        setCachedVideoPrompt(resolvedPrompt)
+
+        setVideoResult({
+          url: payload.video.url,
+          fileName: payload.video.fileName,
+          id: `${payload.runId}-latest-video`,
+        })
+        applyProgressSnapshot(snapshot ?? null)
+        setVideoPrompt(resolvedPrompt)
       } else {
         setCachedVideoAsset(null)
         setCachedVideoProgress(null)
         setCachedVideoPrompt('')
+        setVideoResult(null)
+        applyProgressSnapshot(null)
       }
-      setVideoResult(null)
-      applyProgressSnapshot(null)
       setVideoError(null)
       setUsedReference(Boolean(payload.metadata?.usedReference))
     } catch (err) {
