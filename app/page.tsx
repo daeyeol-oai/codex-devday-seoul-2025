@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { ImageCarousel } from '@/app/components/ImageCarousel'
 import { ImageGrid } from '@/app/components/ImageGrid'
@@ -57,6 +57,7 @@ export default function HomePage() {
   } | null>(null)
   const [cachedVideoProgress, setCachedVideoProgress] = useState<VideoProgressSnapshot | null>(null)
   const [cachedVideoPrompt, setCachedVideoPrompt] = useState('')
+  const hasAttemptedInitialLoad = useRef(false)
 
   const selectedImage = useMemo(
     () => images.find((image) => image.id === selectedImageId) ?? null,
@@ -193,6 +194,8 @@ export default function HomePage() {
         throw new Error('최근 생성된 이미지가 없습니다.')
       }
 
+      const latestPrompt = payload.metadata?.prompt ?? ''
+
       setRunId(payload.runId)
       const mappedImages: GeneratedImage[] = payload.images.map((image, index) => ({
         id: `${payload.runId}-latest-${index}`,
@@ -206,11 +209,11 @@ export default function HomePage() {
       }))
       setImages(mappedImages)
       setSelectedImageId(mappedImages[0]?.id ?? null)
+      setPrompt(latestPrompt)
       const snapshot = payload.progress ? (payload.progress as VideoProgressSnapshot) : null
       if (payload.video) {
         const promptFromSnapshot = snapshot?.prompt ?? ''
-        const metadataPrompt = payload.metadata?.prompt ?? ''
-        const resolvedPrompt = promptFromSnapshot || metadataPrompt
+        const resolvedPrompt = promptFromSnapshot || latestPrompt
 
         setCachedVideoAsset({
           runId: payload.runId,
@@ -219,13 +222,20 @@ export default function HomePage() {
         })
         setCachedVideoProgress(snapshot)
         setCachedVideoPrompt(resolvedPrompt)
+        setVideoResult({
+          url: payload.video.url,
+          fileName: payload.video.fileName,
+          id: `${payload.runId}-latest-video`,
+        })
+        applyProgressSnapshot(snapshot ?? null)
+        setVideoPrompt(resolvedPrompt)
       } else {
         setCachedVideoAsset(null)
         setCachedVideoProgress(null)
         setCachedVideoPrompt('')
+        setVideoResult(null)
+        applyProgressSnapshot(null)
       }
-      setVideoResult(null)
-      applyProgressSnapshot(null)
       setVideoError(null)
       setUsedReference(Boolean(payload.metadata?.usedReference))
     } catch (err) {
@@ -234,6 +244,15 @@ export default function HomePage() {
       setIsLoadingLatest(false)
     }
   }, [applyProgressSnapshot])
+
+  useEffect(() => {
+    if (hasAttemptedInitialLoad.current) {
+      return
+    }
+
+    hasAttemptedInitialLoad.current = true
+    void handleLoadLatest()
+  }, [handleLoadLatest])
 
   useEffect(() => {
     if (!isPollingProgress || !runId || !activeProgressPath) {
