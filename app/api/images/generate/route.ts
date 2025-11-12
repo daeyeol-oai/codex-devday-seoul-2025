@@ -49,7 +49,11 @@ async function normaliseSketch(sketch: File) {
 }
 
 async function writeMetadata(runId: string, payload: ImageResponse) {
-  await writeFileInRun(runId, 'metadata.json', JSON.stringify(payload, null, 2))
+  const metadataPayload = {
+    ...payload,
+    videos: [],
+  }
+  await writeFileInRun(runId, 'metadata.json', JSON.stringify(metadataPayload, null, 2))
 }
 
 export async function POST(request: NextRequest) {

@@ -62,14 +62,16 @@ Successful response (`200`):
     }
   ],
   "video": {
-    "fileName": "video.mp4",
-    "url": "/outputs/images-20241127041030-abc123/video.mp4",
-    "relativePath": "images-20241127041030-abc123/video.mp4",
+    "fileName": "video-abc123.mp4",
+    "url": "/outputs/images-20241127041030-abc123/videos/abc123/video-abc123.mp4",
+    "relativePath": "images-20241127041030-abc123/videos/abc123/video-abc123.mp4",
     "updatedAt": "2024-11-27T04:15:12.000Z"
   },
   "progress": {
     "status": "completed",
-    "progress": 100
+    "progress": 100,
+    "progressFile": "videos/abc123/sora-progress-abc123.json",
+    "videoFile": "videos/abc123/video-abc123.mp4"
   }
 }
 ```
@@ -87,13 +89,14 @@ Creates an 8 second, 1280×720 video through Sora. Request body (`application/js
 | `runId` | string | optional | Explicit run scope; inferred from `imageUrl` if omitted. |
 | `seconds` | number\|string | optional | Defaults to `8`. Accepts `4`, `8`, or `12`. |
 | `size` | string | optional | Defaults to `1280x720`. Must be a supported Sora size. |
+| `token` | string | optional | Client-supplied short slug (letters/numbers, 4-16 chars). If omitted the server generates one. |
 
 Workflow:
 
-1. Selected image is resized to 1280×720 PNG (`public/outputs/<runId>/video/reference.png`).
+1. Selected image is resized to 1280×720 PNG inside the video scope (`public/outputs/<runId>/videos/<token>/reference.png`).
 2. `openai.videos.create` submits the request to `sora-2`.
-3. The endpoint polls `openai.videos.retrieve` until completion (or failure) updating `progress.json` on each step.
-4. Final media is downloaded via `openai.videos.downloadContent` into `public/outputs/<runId>/video.mp4`.
+3. The endpoint polls `openai.videos.retrieve` until completion (or failure) updating `videos/<token>/sora-progress-<token>.json` on each step.
+4. Final media is downloaded via `openai.videos.downloadContent` into `public/outputs/<runId>/videos/<token>/video-<token>.mp4`.
 
 Successful response (`201`):
 
@@ -104,8 +107,10 @@ Successful response (`201`):
   "seconds": "8",
   "size": "1280x720",
   "video": {
-    "url": "/outputs/images-20241127041030-abc123/video.mp4",
-    "fileName": "video.mp4",
+    "url": "/outputs/images-20241127041030-abc123/videos/abc123/video-abc123.mp4",
+    "fileName": "video-abc123.mp4",
+    "relativePath": "videos/abc123/video-abc123.mp4",
+    "token": "abc123",
     "id": "video_456"
   },
   "progress": {
@@ -119,6 +124,8 @@ Successful response (`201`):
     "size": "1280x720",
     "startedAt": "2024-11-27T04:10:30.300Z",
     "updatedAt": "2024-11-27T04:15:12.000Z",
+    "progressFile": "videos/abc123/sora-progress-abc123.json",
+    "videoFile": "videos/abc123/video-abc123.mp4",
     "history": [
       {
         "status": "queued",
@@ -137,8 +144,8 @@ Successful response (`201`):
       }
     ],
     "assets": {
-      "video": "/outputs/images-20241127041030-abc123/video.mp4",
-      "reference": "/outputs/images-20241127041030-abc123/video/reference.png",
+      "video": "/outputs/images-20241127041030-abc123/videos/abc123/video-abc123.mp4",
+      "reference": "/outputs/images-20241127041030-abc123/videos/abc123/reference.png",
       "images": ["/outputs/images-20241127041030-abc123/images/image-1.png"]
     }
   }
@@ -152,7 +159,7 @@ Errors:
 - Sora failures ⇒ `502` with the upstream error message
 - timeout ⇒ `504`
 
-Once the request begins, progress updates are written to `public/outputs/<runId>/progress.json` so the UI can poll independently.
+Once the request begins, progress updates are written to `public/outputs/<runId>/videos/<token>/sora-progress-<token>.json` so the UI can poll independently.
 
 ## `POST /api/codex/agent`
 
@@ -199,6 +206,6 @@ Attempts to restore the latest git snapshot created by the agent/theme routes.
 ## Local Verification
 
 - `npm run lint` – typecheck and lint.
-- Inspect `public/outputs/<runId>/` for generated PNGs, `progress.json`, and `video.mp4`.
+- Inspect `public/outputs/<runId>/` for generated PNGs plus any `videos/<token>/` folders that contain the MP4, reference PNG, and per-job `sora-progress-<token>.json` snapshots.
 - Use `curl -N -X POST http://localhost:3000/api/codex/agent -H 'Content-Type: application/json' -d '{"prompt":"..."}'` to inspect raw SSE output.
 - `git stash list` will reflect snapshots recorded by the Codex endpoints.

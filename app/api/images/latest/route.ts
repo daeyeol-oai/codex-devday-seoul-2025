@@ -14,6 +14,7 @@ export const runtime = 'nodejs'
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'])
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov'])
+const SORA_PROGRESS_PREFIX = 'sora-progress'
 
 type AssetDescriptor = {
   fileName: string
@@ -22,12 +23,32 @@ type AssetDescriptor = {
   updatedAt: string
 }
 
+type VideoMetadataEntry = {
+  id?: string
+  relativePath?: string
+  progressFile?: string
+  fileName?: string
+  url?: string
+  seconds?: string
+  size?: string
+  prompt?: string
+  createdAt?: string
+  model?: string
+  videoJobId?: string
+}
+
+type RunMetadata = {
+  prompt?: string
+  usedReference?: boolean
+  videos?: VideoMetadataEntry[]
+}
+
 type LatestAssetsResponse = {
   runId: string
   images: AssetDescriptor[]
   video: AssetDescriptor | null
   progress?: Record<string, unknown> | null
-  metadata?: Record<string, unknown> | null
+  metadata?: RunMetadata | null
 }
 
 async function collectFiles(basePath: string, extensions: Set<string>) {
@@ -60,17 +81,26 @@ function buildPublicUrl(fullPath: string) {
   return `/outputs/${relative.replace(/\\/g, '/')}`
 }
 
-async function readProgress(basePath: string) {
-  const progressPath = path.join(basePath, 'progress.json')
-  try {
-    const raw = await fs.readFile(progressPath, 'utf8')
-    return JSON.parse(raw) as Record<string, unknown>
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      return null
-    }
-    throw err
+async function readProgress(basePath: string, relativePath?: string | null) {
+  const candidates: string[] = []
+  if (relativePath) {
+    candidates.push(path.join(basePath, relativePath))
   }
+  candidates.push(path.join(basePath, 'progress.json'))
+
+  for (const candidate of candidates) {
+    try {
+      const raw = await fs.readFile(candidate, 'utf8')
+      return JSON.parse(raw) as Record<string, unknown>
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        continue
+      }
+      throw err
+    }
+  }
+
+  return null
 }
 
 async function loadRunAssets(runId: string, absolutePath: string): Promise<LatestAssetsResponse | null> {
@@ -79,11 +109,31 @@ async function loadRunAssets(runId: string, absolutePath: string): Promise<Lates
   const fallbackImages =
     images.length > 0 ? images : await collectFiles(absolutePath, IMAGE_EXTENSIONS)
 
-  const videoAssets = await collectFiles(absolutePath, VIDEO_EXTENSIONS)
-  const video = videoAssets.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0] ?? null
+  const nestedVideoAssets = await collectVideoAssetsFromDirs(absolutePath)
+  const flatVideoAssets = await collectFiles(absolutePath, VIDEO_EXTENSIONS)
+  const combinedVideos =
+    nestedVideoAssets.length > 0 ? nestedVideoAssets : flatVideoAssets
+  const video = combinedVideos.sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1))[0] ?? null
 
-  const progress = await readProgress(absolutePath)
   const metadata = await readMetadata(absolutePath)
+  const videoRelativeWithinRun = video ? getRunRelativePath(runId, video.relativePath) : null
+  const metadataVideos = metadata?.videos ?? []
+  const matchedMetadata =
+    videoRelativeWithinRun && metadataVideos.length
+      ? metadataVideos.find((entry) => entry.relativePath === videoRelativeWithinRun)
+      : null
+
+  let progressRelative: string | null = null
+  if (matchedMetadata?.progressFile) {
+    progressRelative = matchedMetadata.progressFile
+  } else if (videoRelativeWithinRun) {
+    progressRelative = inferProgressRelativePath(videoRelativeWithinRun)
+  }
+  if (!progressRelative) {
+    progressRelative = await findLatestProgressRelativePath(absolutePath)
+  }
+
+  const progress = await readProgress(absolutePath, progressRelative)
 
   if (fallbackImages.length === 0 && !video && !progress) {
     return null
@@ -114,14 +164,67 @@ async function getChosenRun(): Promise<LatestAssetsResponse | null> {
   return loadRunAssets('chosen', chosenPath)
 }
 
-async function readMetadata(basePath: string) {
-  const metadataPath = path.join(basePath, 'metadata.json')
+async function collectVideoAssetsFromDirs(runPath: string) {
+  const videosPath = path.join(runPath, 'videos')
+  const assets: AssetDescriptor[] = []
   try {
-    const raw = await fs.readFile(metadataPath, 'utf8')
-    const parsed = JSON.parse(raw) as Record<string, unknown>
-    return {
-      prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
-      usedReference: Boolean((parsed as { usedReference?: unknown }).usedReference),
+    const entries = await fs.readdir(videosPath, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const dirPath = path.join(videosPath, entry.name)
+      const files = await fs.readdir(dirPath, { withFileTypes: true })
+      for (const file of files) {
+        if (!file.isFile()) continue
+        const ext = path.extname(file.name).toLowerCase()
+        if (!VIDEO_EXTENSIONS.has(ext)) continue
+        const fullPath = path.join(dirPath, file.name)
+        const stats = await fs.stat(fullPath)
+        assets.push({
+          fileName: file.name,
+          url: buildPublicUrl(fullPath),
+          relativePath: path.relative(getOutputsRoot(), fullPath).replace(/\\/g, '/'),
+          updatedAt: stats.mtime.toISOString(),
+        })
+      }
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return []
+    }
+    throw err
+  }
+  return assets
+}
+
+function inferProgressRelativePath(videoRelativePath: string | null) {
+  if (!videoRelativePath) return null
+  const normalized = videoRelativePath.replace(/\\/g, '/')
+  const baseName = path.posix.basename(normalized)
+  const dirName = path.posix.dirname(normalized)
+  const match = baseName.match(/^video-(.+)\.mp4$/)
+  if (!match) return null
+  return path.posix.join(dirName, `${SORA_PROGRESS_PREFIX}-${match[1]}.json`)
+}
+
+async function findLatestProgressRelativePath(runPath: string) {
+  const videosPath = path.join(runPath, 'videos')
+  const candidates: Array<{ relative: string; mtime: number }> = []
+  try {
+    const entries = await fs.readdir(videosPath, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const dirPath = path.join(videosPath, entry.name)
+      const files = await fs.readdir(dirPath, { withFileTypes: true })
+      for (const file of files) {
+        if (!file.isFile()) continue
+        if (!file.name.startsWith(`${SORA_PROGRESS_PREFIX}-`) || path.extname(file.name).toLowerCase() !== '.json') continue
+        const fullPath = path.join(dirPath, file.name)
+        const stats = await fs.stat(fullPath)
+        candidates.push({
+          relative: path.relative(runPath, fullPath).replace(/\\/g, '/'),
+          mtime: stats.mtimeMs,
+        })
+      }
     }
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
@@ -129,6 +232,47 @@ async function readMetadata(basePath: string) {
     }
     throw err
   }
+
+  if (!candidates.length) {
+    return null
+  }
+
+  candidates.sort((a, b) => b.mtime - a.mtime)
+  return candidates[0].relative
+}
+
+async function readMetadata(basePath: string) {
+  const metadataPath = path.join(basePath, 'metadata.json')
+  try {
+    const raw = await fs.readFile(metadataPath, 'utf8')
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const videos = Array.isArray((parsed as { videos?: unknown }).videos)
+      ? ((parsed as { videos?: VideoMetadataEntry[] }).videos ?? []).map((video) => ({
+          ...video,
+          relativePath: typeof video.relativePath === 'string' ? video.relativePath : undefined,
+          progressFile: typeof video.progressFile === 'string' ? video.progressFile : undefined,
+        }))
+      : undefined
+    return {
+      prompt: typeof parsed.prompt === 'string' ? parsed.prompt : undefined,
+      usedReference: Boolean((parsed as { usedReference?: unknown }).usedReference),
+      videos,
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null
+    }
+    throw err
+  }
+}
+
+function getRunRelativePath(runId: string, outputsRelativePath: string) {
+  const normalized = outputsRelativePath.replace(/\\/g, '/')
+  const prefix = `${runId}/`
+  if (normalized.startsWith(prefix)) {
+    return normalized.slice(prefix.length)
+  }
+  return normalized
 }
 
 function sortRunsByModified(runs: Awaited<ReturnType<typeof listRuns>>, exclude: string[]) {

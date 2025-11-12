@@ -22,3 +22,8 @@ _Last reset: 2025-11-12. Previous snapshot archived in docs/plan-history-2025111
 - [x] Add an “Inpainting” entry point beside the existing upload/run buttons in `SidePanel`, capture the current viewport via `html-to-image`, and open a fullscreen overlay.
 - [x] Build the overlay editor with `react-konva` so users can draw thick red pen strokes, drag speech-bubble sticky notes (with movable tails), define a crop box, undo edits, and cancel/done actions.
 - [x] When a user hits Done, export the edited region (respecting the crop) to PNG, pipe it through the existing attachment upload flow, and surface it in the attachment list just like manual uploads.
+
+### Video asset restructuring
+- [x] Store every Sora render under `videos/<token>/` with unique short tokens so multiple videos can coexist per run.
+- [x] Write per-job progress snapshots to `sora-progress-<token>.json`, embed metadata inside `metadata.json`, and surface the new structure through `GET /api/images/latest`.
+- [x] Update the web client to generate tokens, poll the correct progress file, and consume the enriched API/types without relying on legacy `progress.json`.

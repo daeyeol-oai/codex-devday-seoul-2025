@@ -1,4 +1,5 @@
 import path from 'path'
+import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'fs'
 import { NextRequest } from 'next/server'
 import sharp from 'sharp'
@@ -20,9 +21,10 @@ export const runtime = 'nodejs'
 const VIDEO_MODEL = 'sora-2'
 const DEFAULT_SECONDS = '8' as const
 const DEFAULT_SIZE = '1280x720' as const
-const PROGRESS_FILE = 'progress.json'
-const REFERENCE_FILE = 'video/reference.png'
-const OUTPUT_VIDEO_FILE = 'video.mp4'
+const VIDEO_DIRECTORY = 'videos'
+const VIDEO_FILE_PREFIX = 'video'
+const REFERENCE_FILE_NAME = 'reference.png'
+const PROGRESS_FILE_PREFIX = 'sora-progress'
 const POLL_INTERVAL_MS = 2000
 const MAX_POLL_ATTEMPTS = 90
 
@@ -32,6 +34,7 @@ type VideoRequestBody = {
   seconds?: unknown
   size?: unknown
   runId?: unknown
+  token?: unknown
 }
 
 type NormalizedRequest = {
@@ -40,6 +43,7 @@ type NormalizedRequest = {
   imageRelativePath: string
   seconds: '4' | '8' | '12'
   size: '720x1280' | '1280x720' | '1024x1792' | '1792x1024'
+  videoToken: string
 }
 
 type ProgressSnapshot = {
@@ -53,6 +57,8 @@ type ProgressSnapshot = {
   size: string
   startedAt: string
   updatedAt: string
+  progressFile: string
+  videoFile: string | null
   history: Array<{
     status: 'queued' | 'in_progress' | 'completed' | 'failed'
     progress: number
@@ -115,10 +121,24 @@ async function fileExists(pathToFile: string) {
   }
 }
 
-async function prepareReferenceImage(runId: string, sourceRelativePath: string, targetSize: string) {
+type StoredVideoMetadata = {
+  id: string
+  fileName: string
+  relativePath: string
+  url: string
+  progressFile: string
+  seconds: string
+  size: string
+  prompt: string
+  createdAt: string
+  model: string
+  videoJobId: string
+}
+
+async function prepareReferenceImage(runId: string, sourceRelativePath: string, targetSize: string, referenceRelativePath: string) {
   const [width, height] = targetSize.split('x').map((part) => Number.parseInt(part, 10))
   const sourcePath = resolveRunPath(runId, sourceRelativePath)
-  const referenceRelative = REFERENCE_FILE
+  const referenceRelative = referenceRelativePath
   const referencePath = resolveRunPath(runId, referenceRelative)
   await fs.mkdir(path.dirname(referencePath), { recursive: true })
   const buffer = await sharp(sourcePath).resize(width, height, { fit: 'cover' }).png().toBuffer()
@@ -126,7 +146,15 @@ async function prepareReferenceImage(runId: string, sourceRelativePath: string, 
   return referenceRelative
 }
 
-function initialProgressSnapshot(runId: string, prompt: string, videoId: string, request: NormalizedRequest): ProgressSnapshot {
+function initialProgressSnapshot(
+  runId: string,
+  prompt: string,
+  videoId: string,
+  request: NormalizedRequest,
+  progressRelativePath: string,
+  videoRelativePath: string,
+  referenceRelativePath: string,
+): ProgressSnapshot {
   const timestamp = new Date().toISOString()
   return {
     runId,
@@ -139,6 +167,8 @@ function initialProgressSnapshot(runId: string, prompt: string, videoId: string,
     size: request.size,
     startedAt: timestamp,
     updatedAt: timestamp,
+    progressFile: progressRelativePath,
+    videoFile: null,
     history: [
       {
         status: 'queued',
@@ -148,14 +178,14 @@ function initialProgressSnapshot(runId: string, prompt: string, videoId: string,
     ],
     assets: {
       video: null,
-      reference: `/outputs/${runId}/${REFERENCE_FILE}`,
+      reference: `/outputs/${runId}/${referenceRelativePath}`,
       images: [`/outputs/${runId}/${request.imageRelativePath}`],
     },
   }
 }
 
-async function writeProgress(runId: string, snapshot: ProgressSnapshot) {
-  await writeFileInRun(runId, PROGRESS_FILE, JSON.stringify(snapshot, null, 2))
+async function writeProgress(runId: string, relativePath: string, snapshot: ProgressSnapshot) {
+  await writeFileInRun(runId, relativePath, JSON.stringify(snapshot, null, 2))
 }
 
 function updateProgress(snapshot: ProgressSnapshot, status: ProgressSnapshot['status'], progressValue: number, updatedAt: number, error?: { code?: string; message?: string }) {
@@ -169,12 +199,65 @@ function updateProgress(snapshot: ProgressSnapshot, status: ProgressSnapshot['st
   }
 }
 
-async function downloadVideo(runId: string, videoId: string) {
+async function downloadVideo(runId: string, videoId: string, relativePath: string) {
   const client = getOpenAIClient()
   const response = await client.videos.downloadContent(videoId)
   const arrayBuffer = await response.arrayBuffer()
-  await writeFileInRun(runId, OUTPUT_VIDEO_FILE, Buffer.from(arrayBuffer))
-  return `/outputs/${runId}/${OUTPUT_VIDEO_FILE}`
+  await writeFileInRun(runId, relativePath, Buffer.from(arrayBuffer))
+  return `/outputs/${runId}/${relativePath}`
+}
+
+function createVideoToken() {
+  return randomUUID().split('-')[0]
+}
+
+function ensureVideoToken(value: unknown) {
+  if (typeof value === 'string') {
+    const trimmed = value.toLowerCase().replace(/[^a-z0-9]/g, '')
+    if (trimmed.length >= 4 && trimmed.length <= 16) {
+      return trimmed
+    }
+  }
+  return createVideoToken()
+}
+
+function buildVideoPaths(videoToken: string) {
+  const baseDir = path.posix.join(VIDEO_DIRECTORY, videoToken)
+  const videoFileName = `${VIDEO_FILE_PREFIX}-${videoToken}.mp4`
+  const progressFileName = `${PROGRESS_FILE_PREFIX}-${videoToken}.json`
+  const videoRelativePath = path.posix.join(baseDir, videoFileName)
+  const progressRelativePath = path.posix.join(baseDir, progressFileName)
+  const referenceRelativePath = path.posix.join(baseDir, REFERENCE_FILE_NAME)
+  return {
+    videoRelativePath,
+    progressRelativePath,
+    referenceRelativePath,
+  }
+}
+
+async function appendVideoMetadata(runId: string, payload: StoredVideoMetadata) {
+  const metadataPath = resolveRunPath(runId, 'metadata.json')
+  let parsed: Record<string, unknown> = {}
+  try {
+    const raw = await fs.readFile(metadataPath, 'utf8')
+    parsed = JSON.parse(raw) as Record<string, unknown>
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw err
+    }
+  }
+
+  const existingVideos = Array.isArray((parsed as { videos?: unknown }).videos)
+    ? ((parsed as { videos?: StoredVideoMetadata[] }).videos ?? [])
+    : []
+  const nextVideos = [...existingVideos.filter((entry) => entry.id !== payload.id), payload]
+
+  const next = {
+    ...parsed,
+    videos: nextVideos,
+  }
+
+  await writeFileInRun(runId, 'metadata.json', JSON.stringify(next, null, 2))
 }
 
 function normalizeRequest(body: VideoRequestBody): NormalizedRequest {
@@ -185,11 +268,14 @@ function normalizeRequest(body: VideoRequestBody): NormalizedRequest {
     throw new Error('imageUrl is required')
   }
 
+  const record = body as Record<string, unknown>
   const { runSegment, imageRelativePath } = normalizeImagePath(body.imageUrl.trim())
 
   const runId = typeof body.runId === 'string' && body.runId.trim().length > 0
     ? sanitizePathSegment(body.runId, body.runId)
     : runSegment
+
+  const videoToken = ensureVideoToken(record.token)
 
   return {
     prompt: body.prompt.trim(),
@@ -197,6 +283,7 @@ function normalizeRequest(body: VideoRequestBody): NormalizedRequest {
     imageRelativePath,
     seconds: ensureSeconds(body.seconds),
     size: ensureSize(body.size),
+    videoToken,
   }
 }
 
@@ -212,10 +299,15 @@ export async function POST(request: NextRequest) {
       return error(400, 'Referenced image file does not exist')
     }
 
-    const referenceRelativePath = await prepareReferenceImage(
+    const { videoRelativePath, progressRelativePath, referenceRelativePath } = buildVideoPaths(
+      normalized.videoToken,
+    )
+
+    await prepareReferenceImage(
       normalized.runId,
       normalized.imageRelativePath,
       normalized.size,
+      referenceRelativePath,
     )
 
     const referenceAbsolutePath = resolveRunPath(normalized.runId, referenceRelativePath)
@@ -237,9 +329,17 @@ export async function POST(request: NextRequest) {
       return error(502, 'Video generation request failed')
     }
 
-    const snapshot = initialProgressSnapshot(normalized.runId, normalized.prompt, videoJob.id, normalized)
+    const snapshot = initialProgressSnapshot(
+      normalized.runId,
+      normalized.prompt,
+      videoJob.id,
+      normalized,
+      progressRelativePath,
+      videoRelativePath,
+      referenceRelativePath,
+    )
     updateProgress(snapshot, videoJob.status, videoJob.progress ?? 0, videoJob.created_at)
-    await writeProgress(normalized.runId, snapshot)
+    await writeProgress(normalized.runId, progressRelativePath, snapshot)
 
     let currentJob = videoJob
     let attempts = 0
@@ -249,7 +349,7 @@ export async function POST(request: NextRequest) {
         updateProgress(snapshot, 'failed', snapshot.progress, Math.floor(Date.now() / 1000), {
           message: 'Video generation timed out',
         })
-        await writeProgress(normalized.runId, snapshot)
+        await writeProgress(normalized.runId, progressRelativePath, snapshot)
         return error(504, 'Video generation timed out')
       }
 
@@ -264,7 +364,7 @@ export async function POST(request: NextRequest) {
           code: 'poll_failed',
           message: pollError instanceof Error ? pollError.message : 'Failed to poll video status',
         })
-        await writeProgress(normalized.runId, snapshot)
+        await writeProgress(normalized.runId, progressRelativePath, snapshot)
         return error(502, 'Video generation failed while polling for status', { code: 'poll_failed' })
       }
 
@@ -275,17 +375,18 @@ export async function POST(request: NextRequest) {
         Math.floor(Date.now() / 1000),
         currentJob.error ? { code: currentJob.error.code, message: currentJob.error.message } : undefined,
       )
-      await writeProgress(normalized.runId, snapshot)
+      await writeProgress(normalized.runId, progressRelativePath, snapshot)
     }
 
     if (currentJob.status === 'failed') {
       const failureMessage = currentJob.error?.message ?? 'Video generation failed'
-      await writeProgress(normalized.runId, snapshot)
+      await writeProgress(normalized.runId, progressRelativePath, snapshot)
       return error(502, failureMessage, { code: currentJob.error?.code })
     }
 
-    const videoUrl = await downloadVideo(normalized.runId, currentJob.id)
+    const videoUrl = await downloadVideo(normalized.runId, currentJob.id, videoRelativePath)
     snapshot.assets.video = videoUrl
+    snapshot.videoFile = videoRelativePath
     snapshot.progress = 100
     snapshot.status = 'completed'
     snapshot.updatedAt = new Date((currentJob.completed_at ?? Math.floor(Date.now() / 1000)) * 1000).toISOString()
@@ -294,9 +395,22 @@ export async function POST(request: NextRequest) {
       progress: 100,
       timestamp: snapshot.updatedAt,
     })
-    await writeProgress(normalized.runId, snapshot)
+    await writeProgress(normalized.runId, progressRelativePath, snapshot)
 
-    await writeFileInRun(normalized.runId, 'video.json', JSON.stringify(currentJob, null, 2))
+    const storedAt = new Date().toISOString()
+    await appendVideoMetadata(normalized.runId, {
+      id: normalized.videoToken,
+      fileName: path.posix.basename(videoRelativePath),
+      relativePath: videoRelativePath,
+      url: videoUrl,
+      progressFile: progressRelativePath,
+      seconds: normalized.seconds,
+      size: normalized.size,
+      prompt: normalized.prompt,
+      createdAt: storedAt,
+      model: VIDEO_MODEL,
+      videoJobId: currentJob.id,
+    })
 
     logInfo('Sora video generated successfully', {
       runId: normalized.runId,
@@ -313,7 +427,9 @@ export async function POST(request: NextRequest) {
         size: normalized.size,
         video: {
           url: videoUrl,
-          fileName: OUTPUT_VIDEO_FILE,
+          fileName: path.posix.basename(videoRelativePath),
+          relativePath: videoRelativePath,
+          token: normalized.videoToken,
           id: currentJob.id,
         },
         progress: snapshot,

@@ -16,6 +16,18 @@ import type {
 type VideoResult = VideoGenerationResponse['video']
 
 const PROGRESS_POLL_MS = 2000
+const LEGACY_PROGRESS_FILE = 'progress.json'
+
+function createClientVideoToken() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().split('-')[0]
+  }
+  return Math.random().toString(36).slice(2, 10)
+}
+
+function buildProgressPathFromToken(token: string) {
+  return `videos/${token}/sora-progress-${token}.json`
+}
 
 export default function HomePage() {
   const [sketchFile, setSketchFile] = useState<File | null>(null)
@@ -34,6 +46,7 @@ export default function HomePage() {
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false)
 
   const [progress, setProgress] = useState<VideoProgressSnapshot | null>(null)
+  const [activeProgressPath, setActiveProgressPath] = useState<string | null>(null)
   const [isPollingProgress, setIsPollingProgress] = useState(false)
   const [usedReference, setUsedReference] = useState(false)
   const [cachedVideoAsset, setCachedVideoAsset] = useState<{
@@ -62,6 +75,19 @@ export default function HomePage() {
     setSketchLabel(file ? file.name : 'No file chosen')
   }, [])
 
+  const applyProgressSnapshot = useCallback((snapshot: VideoProgressSnapshot | null) => {
+    setProgress(snapshot)
+    if (snapshot) {
+      const progressFile =
+        typeof snapshot.progressFile === 'string' && snapshot.progressFile.length > 0
+          ? snapshot.progressFile
+          : LEGACY_PROGRESS_FILE
+      setActiveProgressPath(progressFile)
+    } else {
+      setActiveProgressPath(null)
+    }
+  }, [])
+
   const handleLoadLatestVideo = useCallback(() => {
     if (!cachedVideoAsset || cachedVideoAsset.runId !== runId) {
       return
@@ -73,13 +99,11 @@ export default function HomePage() {
       fileName: cachedVideoAsset.fileName,
       id: `${cachedVideoAsset.runId}-latest-video`,
     })
-    if (cachedVideoProgress) {
-      setProgress(cachedVideoProgress)
-    }
+    applyProgressSnapshot(cachedVideoProgress ?? null)
     if (cachedVideoPrompt) {
       setVideoPrompt(cachedVideoPrompt)
     }
-  }, [cachedVideoAsset, cachedVideoProgress, cachedVideoPrompt, runId])
+  }, [applyProgressSnapshot, cachedVideoAsset, cachedVideoProgress, cachedVideoPrompt, runId])
 
   const handleGenerateImages = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -91,7 +115,7 @@ export default function HomePage() {
     setImageError(null)
     setIsGeneratingImages(true)
     setVideoResult(null)
-    setProgress(null)
+    applyProgressSnapshot(null)
     setSelectedImageId(null)
     setCachedVideoAsset(null)
     setCachedVideoProgress(null)
@@ -130,7 +154,7 @@ export default function HomePage() {
     } finally {
       setIsGeneratingImages(false)
     }
-  }, [prompt, sketchFile])
+  }, [applyProgressSnapshot, prompt, sketchFile])
 
   const handleLoadLatest = useCallback(async () => {
     setImageError(null)
@@ -184,7 +208,7 @@ export default function HomePage() {
         setCachedVideoPrompt('')
       }
       setVideoResult(null)
-      setProgress(null)
+      applyProgressSnapshot(null)
       setVideoError(null)
       setUsedReference(Boolean(payload.metadata?.usedReference))
     } catch (err) {
@@ -192,7 +216,7 @@ export default function HomePage() {
     } finally {
       setIsLoadingLatest(false)
     }
-  }, [])
+  }, [applyProgressSnapshot])
 
   useEffect(() => {
     if (hasAttemptedInitialLoad.current) {
@@ -204,7 +228,7 @@ export default function HomePage() {
   }, [handleLoadLatest])
 
   useEffect(() => {
-    if (!isPollingProgress || !runId) {
+    if (!isPollingProgress || !runId || !activeProgressPath) {
       return undefined
     }
 
@@ -212,7 +236,7 @@ export default function HomePage() {
 
     const poll = async () => {
       try {
-        const response = await fetch(`/outputs/${runId}/progress.json?ts=${Date.now()}`, {
+        const response = await fetch(`/outputs/${runId}/${activeProgressPath}?ts=${Date.now()}`, {
           cache: 'no-store',
         })
 
@@ -223,7 +247,7 @@ export default function HomePage() {
 
         const snapshot = (await response.json()) as VideoProgressSnapshot
         if (!isCancelled) {
-          setProgress(snapshot)
+          applyProgressSnapshot(snapshot)
           if (snapshot.status === 'completed' || snapshot.status === 'failed') {
             setIsPollingProgress(false)
           }
@@ -241,7 +265,7 @@ export default function HomePage() {
       isCancelled = true
       clearInterval(interval)
     }
-  }, [isPollingProgress, runId])
+  }, [activeProgressPath, applyProgressSnapshot, isPollingProgress, runId])
 
   const handleGenerateVideo = useCallback(async () => {
     if (!selectedImage || !runId) {
@@ -255,10 +279,14 @@ export default function HomePage() {
       return
     }
 
+    const videoToken = createClientVideoToken()
+    const progressPath = buildProgressPathFromToken(videoToken)
+
     setVideoError(null)
     setVideoResult(null)
-    setProgress(null)
+    applyProgressSnapshot(null)
     setIsGeneratingVideo(true)
+    setActiveProgressPath(progressPath)
     setIsPollingProgress(true)
 
     try {
@@ -273,6 +301,7 @@ export default function HomePage() {
           runId,
           size: '1280x720',
           seconds: 8,
+          token: videoToken,
         }),
       })
 
@@ -283,7 +312,7 @@ export default function HomePage() {
 
       const payload = (await response.json()) as VideoGenerationResponse
       setVideoResult(payload.video)
-      setProgress(payload.progress)
+      applyProgressSnapshot(payload.progress)
       setCachedVideoAsset({
         runId,
         fileName: payload.video.fileName,
@@ -297,7 +326,7 @@ export default function HomePage() {
       setIsGeneratingVideo(false)
       setIsPollingProgress(false)
     }
-  }, [prompt, selectedImage, videoPrompt, runId])
+  }, [applyProgressSnapshot, prompt, selectedImage, videoPrompt, runId])
 
   return (
     <div className='mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 py-10 lg:px-10'>

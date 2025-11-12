@@ -40,7 +40,22 @@ export type LatestAssetsResponse = {
   metadata?: {
     prompt?: string
     usedReference?: boolean
+    videos?: VideoMetadataEntry[]
   } | null
+}
+
+export type VideoMetadataEntry = {
+  id?: string
+  fileName?: string
+  url?: string
+  relativePath?: string
+  progressFile?: string
+  seconds?: string
+  size?: string
+  prompt?: string
+  createdAt?: string
+  model?: string
+  videoJobId?: string
 }
 
 export type VideoProgressStatus = 'queued' | 'in_progress' | 'completed' | 'failed'
@@ -56,6 +71,8 @@ export type VideoProgressSnapshot = {
   size: string
   startedAt: string
   updatedAt: string
+  progressFile: string
+  videoFile: string | null
   history: Array<{
     status: VideoProgressStatus
     progress: number
@@ -80,6 +97,8 @@ export type VideoGenerationResponse = {
   video: {
     url: string
     fileName: string
+    relativePath: string
+    token: string
     id: string
   }
   progress: VideoProgressSnapshot
