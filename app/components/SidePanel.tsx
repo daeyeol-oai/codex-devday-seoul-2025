@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { toPng } from 'html-to-image'
-import { ImageUp, Paintbrush } from 'lucide-react'
+import { ImageUp, Menu, Paintbrush, X } from 'lucide-react'
 
 import InpaintingOverlay from './InpaintingOverlay'
 
@@ -160,6 +160,7 @@ function parseSseChunk(buffer: string, emit: (event: string, data: unknown) => v
 
 export default function SidePanel() {
   const [prompt, setPrompt] = useState('Summarise recent changes and propose the next UI enhancement.')
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
@@ -676,14 +677,47 @@ export default function SidePanel() {
 
   return (
     <>
-      <aside className='hidden w-[360px] border-l border-[var(--panel-border)] bg-[var(--panel-background)] text-[var(--panel-foreground)] lg:flex lg:flex-col'>
-        <div className='border-b border-[var(--panel-border)] px-6 py-5'>
-          <p className='text-xs uppercase tracking-[0.3em] text-[var(--panel-muted)]'>Builder</p>
-          <h2 className='text-lg font-semibold'>Codex Agent</h2>
-          <p className='mt-2 text-xs text-[var(--panel-muted)]'>Run instructions, tweak theme colours, or undo the latest snapshot.</p>
-        </div>
+      {!isPanelOpen ? (
+        <button
+          type='button'
+          onClick={() => setIsPanelOpen(true)}
+          aria-label='Open sidebar'
+          className='fixed right-0 top-3 z-40 hidden items-center rounded-l-lg border border-[var(--panel-border)] bg-[var(--panel-background)] p-3 text-[var(--panel-foreground)] shadow lg:flex'
+        >
+          <Menu className='h-4 w-4' aria-hidden='true' />
+        </button>
+      ) : null}
 
-        <div className='flex-1 space-y-5 overflow-y-auto px-6 py-5 text-sm'>
+      <div
+        className={`relative hidden flex-shrink-0 overflow-visible transition-[width] duration-300 lg:block ${
+          isPanelOpen ? 'w-[360px]' : 'w-0'
+        }`}
+      >
+        <div className='sticky top-0 h-screen w-[360px]'>
+          <aside
+            className={`flex h-full w-[360px] flex-col border-l border-[var(--panel-border)] bg-[var(--panel-background)] text-[var(--panel-foreground)] shadow-xl transition-transform duration-300 ${
+              isPanelOpen ? 'pointer-events-auto translate-x-0' : 'pointer-events-none translate-x-full'
+            }`}
+          >
+          <div className='border-b border-[var(--panel-border)] px-6 py-5'>
+            <div className='flex items-start justify-between gap-4'>
+              <div>
+                <p className='text-xs uppercase tracking-[0.3em] text-[var(--panel-muted)]'>Builder</p>
+                <h2 className='text-lg font-semibold'>Codex Agent</h2>
+                <p className='mt-2 text-xs text-[var(--panel-muted)]'>Run instructions, tweak theme colours, or undo the latest snapshot.</p>
+              </div>
+              <button
+                type='button'
+                onClick={() => setIsPanelOpen(false)}
+                aria-label='Close sidebar'
+                className='rounded-md border border-[var(--panel-border)] p-2 text-[var(--panel-muted)] hover:border-[var(--accent-secondary)] hover:text-[var(--accent-secondary)]'
+              >
+                <X className='h-4 w-4' aria-hidden='true' />
+              </button>
+            </div>
+          </div>
+
+          <div className='builder-sidebar-scroll flex-1 min-h-0 space-y-5 overflow-y-auto pl-6 pr-4 py-5 text-sm'>
         <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
           <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>Run prompt</h3>
           <textarea
@@ -918,6 +952,8 @@ export default function SidePanel() {
         </section>
         </div>
       </aside>
+      </div>
+      </div>
       {isInpaintingOpen && inpaintingImage && inpaintingSize ? (
         <InpaintingOverlay
           screenshot={inpaintingImage}

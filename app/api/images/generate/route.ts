@@ -10,7 +10,7 @@ import { toFile } from 'openai'
 
 export const runtime = 'nodejs'
 
-const IMAGE_COUNT = 5
+const IMAGE_COUNT = 4
 const IMAGE_SIZE = '1536x1024'
 const IMAGE_MODEL = 'gpt-image-1-mini'
 

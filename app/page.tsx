@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ImageCarousel } from '@/app/components/ImageCarousel'
 import { ImageGrid } from '@/app/components/ImageGrid'
@@ -32,6 +32,7 @@ function buildProgressPathFromToken(token: string) {
 export default function HomePage() {
   const [sketchFile, setSketchFile] = useState<File | null>(null)
   const [sketchLabel, setSketchLabel] = useState('No file chosen')
+  const [sketchPreview, setSketchPreview] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
   const [images, setImages] = useState<GeneratedImage[]>([])
   const [runId, setRunId] = useState<string | null>(null)
@@ -56,7 +57,6 @@ export default function HomePage() {
   } | null>(null)
   const [cachedVideoProgress, setCachedVideoProgress] = useState<VideoProgressSnapshot | null>(null)
   const [cachedVideoPrompt, setCachedVideoPrompt] = useState('')
-  const hasAttemptedInitialLoad = useRef(false)
 
   const selectedImage = useMemo(
     () => images.find((image) => image.id === selectedImageId) ?? null,
@@ -70,10 +70,24 @@ export default function HomePage() {
   )
 
   const handleSketchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    setSketchFile(file ?? null)
+    const file = event.target.files?.[0] ?? null
+    setSketchFile(file)
     setSketchLabel(file ? file.name : 'No file chosen')
+    if (file) {
+      const previewUrl = URL.createObjectURL(file)
+      setSketchPreview(previewUrl)
+    } else {
+      setSketchPreview(null)
+    }
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (sketchPreview) {
+        URL.revokeObjectURL(sketchPreview)
+      }
+    }
+  }, [sketchPreview])
 
   const applyProgressSnapshot = useCallback((snapshot: VideoProgressSnapshot | null) => {
     setProgress(snapshot)
@@ -148,6 +162,7 @@ export default function HomePage() {
       if (!payload.usedReference) {
         setSketchFile(null)
         setSketchLabel('No file chosen')
+        setSketchPreview(null)
       }
     } catch (err) {
       setImageError(err instanceof Error ? err.message : 'Failed to generate images')
@@ -204,21 +219,13 @@ export default function HomePage() {
         })
         setCachedVideoProgress(snapshot)
         setCachedVideoPrompt(resolvedPrompt)
-
-        setVideoResult({
-          url: payload.video.url,
-          fileName: payload.video.fileName,
-          id: `${payload.runId}-latest-video`,
-        })
-        applyProgressSnapshot(snapshot ?? null)
-        setVideoPrompt(resolvedPrompt)
       } else {
         setCachedVideoAsset(null)
         setCachedVideoProgress(null)
         setCachedVideoPrompt('')
-        setVideoResult(null)
-        applyProgressSnapshot(null)
       }
+      setVideoResult(null)
+      applyProgressSnapshot(null)
       setVideoError(null)
       setUsedReference(Boolean(payload.metadata?.usedReference))
     } catch (err) {
@@ -227,15 +234,6 @@ export default function HomePage() {
       setIsLoadingLatest(false)
     }
   }, [applyProgressSnapshot])
-
-  useEffect(() => {
-    if (hasAttemptedInitialLoad.current) {
-      return
-    }
-
-    hasAttemptedInitialLoad.current = true
-    void handleLoadLatest()
-  }, [handleLoadLatest])
 
   useEffect(() => {
     if (!isPollingProgress || !runId || !activeProgressPath) {
@@ -351,11 +349,23 @@ export default function HomePage() {
       <section className='space-y-4 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm'>
         <form onSubmit={handleGenerateImages} className='space-y-4'>
           <div className='grid gap-4 md:grid-cols-[minmax(0,0.9fr)_minmax(0,2.1fr)_auto]'>
-            <label className='flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:border-zinc-300'>
-              <span>Upload sketch (optional)</span>
-              <input type='file' accept='image/*' onChange={handleSketchChange} className='hidden' />
-              <span className='truncate text-xs text-zinc-500'>{sketchLabel}</span>
-            </label>
+            <div className='flex flex-col gap-2'>
+              <label className='flex items-center justify-between rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm hover:border-zinc-300'>
+                <span>Upload</span>
+                <input type='file' accept='image/*' onChange={handleSketchChange} className='hidden' />
+                <span className='truncate text-xs text-zinc-500'>{sketchLabel}</span>
+              </label>
+              {sketchPreview ? (
+                <div className='rounded-lg border border-zinc-200 bg-white/70 p-2 shadow-sm'>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={sketchPreview}
+                    alt='Selected sketch preview'
+                    className='h-28 w-full rounded-md object-cover'
+                  />
+                </div>
+              ) : null}
+            </div>
             <input
               type='text'
               value={prompt}
