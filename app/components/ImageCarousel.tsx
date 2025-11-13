@@ -35,7 +35,7 @@ export function ImageCarousel({ images, selectedId, onSelect }: ImageCarouselPro
         <Image
           key={currentImage.id}
           src={currentImage.url}
-          alt={`Generated image ${currentImage.fileName}`}
+          alt={`생성된 이미지 ${currentImage.fileName}`}
           fill
           className='object-contain'
           sizes='(min-width: 1024px) 640px, 100vw'
@@ -49,7 +49,7 @@ export function ImageCarousel({ images, selectedId, onSelect }: ImageCarouselPro
           onClick={() => goToIndex(currentIndex - 1)}
           className='rounded-full bg-white/80 p-2 text-xs font-semibold shadow hover:bg-white'
         >
-          Prev
+          이전
         </button>
       </div>
       <div className='absolute inset-y-0 right-0 flex items-center p-4'>
@@ -58,14 +58,14 @@ export function ImageCarousel({ images, selectedId, onSelect }: ImageCarouselPro
           onClick={() => goToIndex(currentIndex + 1)}
           className='rounded-full bg-white/80 p-2 text-xs font-semibold shadow hover:bg-white'
         >
-          Next
+          다음
         </button>
       </div>
       <div className='border-t border-zinc-200 bg-white/90 px-4 py-3 text-sm text-zinc-600 backdrop-blur'>
         <div className='flex items-center justify-between'>
           <div>
             <p className='font-medium text-zinc-900'>{currentImage.fileName}</p>
-            <p className='text-xs text-zinc-500'>Model: {currentImage.model}</p>
+            <p className='text-xs text-zinc-500'>모델 {currentImage.model}</p>
           </div>
           <div className='text-xs text-zinc-500'>
             {currentIndex + 1} / {images.length}

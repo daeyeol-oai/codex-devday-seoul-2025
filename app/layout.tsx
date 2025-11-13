@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Building Stories',
-  description: 'Upload sketches, generate images, and craft a Sora video.',
+  title: '꿈 스케치 스튜디오',
+  description: '스케치와 글을 올리고 이미지를 만든 뒤 소라 비디오까지 이어지는 창작 놀이터.',
 }
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang='en'>
+    <html lang='ko'>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}> 
         <div className='flex min-h-screen bg-[var(--background)] text-[var(--foreground)]'>
           <main className='flex-1'>{children}</main>

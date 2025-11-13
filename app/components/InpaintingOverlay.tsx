@@ -505,7 +505,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
   const confirmCrop = useCallback(() => {
     const crop = editorStateRef.current.crop
     if (!crop || crop.width < 2 || crop.height < 2) {
-      showCropStatus('Select a larger area before applying crop.')
+      showCropStatus('더 넓은 영역을 선택한 뒤 자르기를 적용해주세요.')
       return
     }
     const cropX = Math.max(0, Math.floor(crop.x))
@@ -522,7 +522,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
       pixelRatio: 1,
     })
     if (!layerCanvas) {
-      showCropStatus('Unable to crop this image.')
+      showCropStatus('이 이미지를 자를 수 없습니다.')
       return
     }
     const nextSrc = layerCanvas.toDataURL('image/png')
@@ -546,7 +546,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
     )
     setIsCropPending(false)
     setCropControls(null)
-    showCropStatus('Crop applied. Canvas resized.')
+    showCropStatus('자르기가 적용되었고 캔버스가 새로 맞춰졌어요.')
   }, [applyEditorState, canvasSize.height, canvasSize.width, showCropStatus])
 
   const cancelCrop = useCallback(() => {
@@ -555,7 +555,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
       ...prev,
       crop: null,
     }))
-    showCropStatus('Crop cancelled.')
+    showCropStatus('자르기가 취소되었습니다.')
   }, [applyEditorState, showCropStatus])
 
   const handleDone = useCallback(async () => {
@@ -595,9 +595,9 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
   const canUndo = historyIndex > 0
 
   const toolButtons: Array<{ id: Tool; label: string; icon: ComponentType<{ className?: string }> }> = [
-    { id: 'pen', label: 'Pen', icon: PenLine },
-    { id: 'crop', label: 'Crop', icon: Crop },
-    { id: 'note', label: 'Note', icon: StickyNote },
+    { id: 'pen', label: '펜', icon: PenLine },
+    { id: 'crop', label: '자르기', icon: Crop },
+    { id: 'note', label: '메모', icon: StickyNote },
   ]
 
   const overlayCursor = useMemo(() => {
@@ -734,7 +734,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
                   <button
                     type='button'
                     onClick={confirmCrop}
-                    aria-label='Apply crop'
+                    aria-label='자르기 적용'
                     className='flex h-6 w-6 items-center justify-center rounded-md bg-slate-900/70 text-white hover:bg-slate-900/80'
                   >
                     <Check className='h-3.5 w-3.5' />
@@ -742,7 +742,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
                   <button
                     type='button'
                     onClick={cancelCrop}
-                    aria-label='Cancel crop'
+                    aria-label='자르기 취소'
                     className='flex h-6 w-6 items-center justify-center rounded-md bg-slate-900/70 text-white hover:bg-slate-900/80'
                   >
                     <X className='h-3.5 w-3.5' />
@@ -782,7 +782,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
             className='flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50'
           >
             <Undo2 className='h-4 w-4' />
-            Undo
+            되돌리기
           </button>
           <span className='mx-1 h-5 w-px bg-white/30' aria-hidden='true' />
           <button
@@ -792,7 +792,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
             className='flex items-center gap-2 rounded-full bg-white/0 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 disabled:opacity-50'
           >
             <X className='h-4 w-4' />
-            Cancel
+            닫기
           </button>
           <button
             type='button'
@@ -801,7 +801,7 @@ export default function InpaintingOverlay({ screenshot, stageWidth, stageHeight,
             className='flex items-center gap-2 rounded-full bg-emerald-400 px-3 py-1.5 text-xs font-semibold text-emerald-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-70'
           >
             <Check className='h-4 w-4' />
-            {isExporting ? 'Saving…' : 'Done'}
+            {isExporting ? '저장 중…' : '완료'}
           </button>
         </div>
       </div>

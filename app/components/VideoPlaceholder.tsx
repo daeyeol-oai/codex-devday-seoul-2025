@@ -18,15 +18,13 @@ export function VideoPlaceholder({ progress, videoUrl, isGenerating }: VideoPlac
 
   if (videoUrl) {
     return (
-      <div className='overflow-hidden rounded-xl border border-zinc-200 bg-black shadow-sm'>
-        <video
-          src={videoUrl}
-          controls
-          className='h-72 w-full bg-black'
-        />
-        <div className='border-t border-zinc-800/40 bg-zinc-900 px-4 py-3 text-sm text-zinc-200'>
-          <p className='font-semibold'>Video ready</p>
-          <p className='text-xs text-zinc-400'>Stored at {videoUrl}</p>
+      <div className='flex h-full flex-col gap-4'>
+        <div className='overflow-hidden rounded-3xl border border-slate-900/60 bg-slate-950 shadow-inner'>
+          <video src={videoUrl} controls className='aspect-video w-full bg-black object-cover' />
+        </div>
+        <div className='rounded-2xl border border-white/40 bg-white/60 px-4 py-3 text-sm text-slate-600'>
+          <p className='font-semibold text-slate-900'>비디오 준비 완료</p>
+          <p className='text-xs text-slate-500'>저장 위치: {videoUrl}</p>
         </div>
       </div>
     )
@@ -34,15 +32,15 @@ export function VideoPlaceholder({ progress, videoUrl, isGenerating }: VideoPlac
 
   if (isGenerating) {
     return (
-      <div className='flex h-72 flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-white text-center'>
-        <div className='flex items-center gap-2 text-sm font-medium text-zinc-700'>
-          <span className='h-2 w-2 animate-pulse rounded-full bg-blue-500' />
-          Rendering video with Sora…
+      <div className='flex h-72 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-white/60 bg-white/60 text-center text-sm text-slate-600'>
+        <div className='flex items-center gap-2 font-semibold text-pink-600'>
+          <span className='h-2 w-2 animate-pulse rounded-full bg-[var(--accent-primary)]' />
+          소라가 영상을 그리는 중…
         </div>
         {latest ? (
-          <div className='text-xs text-zinc-500'>
-            <p>Status: {latest.status}</p>
-            <p>Progress: {latest.progress}%</p>
+          <div className='text-xs text-slate-500'>
+            <p>상태: {latest.status}</p>
+            <p>진행률: {latest.progress}%</p>
           </div>
         ) : null}
       </div>
@@ -50,8 +48,8 @@ export function VideoPlaceholder({ progress, videoUrl, isGenerating }: VideoPlac
   }
 
   return (
-    <div className='flex h-72 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-zinc-300 bg-white text-center text-sm text-zinc-500'>
-      <p>No video yet. Select an image and request a video.</p>
+    <div className='flex h-72 flex-col items-center justify-center gap-2 rounded-3xl border border-dashed border-white/60 bg-white/60 text-center text-sm text-slate-500'>
+      <p>아직 비디오가 없습니다. 이미지를 선택하고 안내 문장을 적어 비디오를 요청해보세요.</p>
     </div>
   )
 }
