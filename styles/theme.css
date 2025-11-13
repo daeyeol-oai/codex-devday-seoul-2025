@@ -1,17 +1,17 @@
 :root {
-  --panel-background: #0f172a;
-  --panel-foreground: #f8fafc;
-  --panel-muted: #94a3b8;
-  --panel-border: rgba(148, 163, 184, 0.2);
-  --accent-primary: #245feb;
-  --accent-secondary: #3ab9f8;
+  --panel-background: linear-gradient(160deg, #3b1d69, #6128a7);
+  --panel-foreground: #fff5fb;
+  --panel-muted: #e9d9ff;
+  --panel-border: rgba(255, 255, 255, 0.25);
+  --accent-primary: #f472b6;
+  --accent-secondary: #c084fc;
 }
 
 body[data-theme='builder-dark'] {
-  --panel-background: #020817;
-  --panel-foreground: #e2e8f0;
-  --panel-muted: #94a3b8;
-  --panel-border: rgba(148, 163, 184, 0.12);
-  --accent-primary: #5b21b6;
-  --accent-secondary: #f472b6;
+  --panel-background: linear-gradient(160deg, #160827, #2c0f4c);
+  --panel-foreground: #f5ecff;
+  --panel-muted: #c8b2ff;
+  --panel-border: rgba(255, 255, 255, 0.15);
+  --accent-primary: #fb7185;
+  --accent-secondary: #a855f7;
 }

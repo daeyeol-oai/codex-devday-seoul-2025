@@ -1,10 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --scrollbar-thumb: rgba(15, 23, 42, 0.3);
-  --scrollbar-track: rgba(15, 23, 42, 0.08);
+  --background: #fff9fb;
+  --foreground: #0f172a;
+  --canvas: #fff4fb;
+  --card-surface: rgba(255, 255, 255, 0.85);
+  --card-border: rgba(255, 255, 255, 0.55);
+  --scrollbar-thumb: rgba(236, 72, 153, 0.35);
+  --scrollbar-track: rgba(236, 72, 153, 0.15);
 }
 
 @theme inline {
@@ -16,15 +19,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --scrollbar-thumb: rgba(148, 163, 184, 0.5);
-    --scrollbar-track: rgba(15, 23, 42, 0.25);
+    --background: #0f0a1c;
+    --foreground: #f8f4ff;
+    --canvas: #120e2b;
+    --card-surface: rgba(19, 15, 39, 0.85);
+    --card-border: rgba(255, 255, 255, 0.2);
+    --scrollbar-thumb: rgba(248, 113, 113, 0.45);
+    --scrollbar-track: rgba(255, 255, 255, 0.15);
   }
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(circle at 20% 20%, #ffe4ef, transparent 50%),
+    radial-gradient(circle at 80% 0%, #ddf6ff, transparent 45%),
+    radial-gradient(circle at 60% 70%, #fdecc8, transparent 40%),
+    var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -66,4 +75,12 @@ body {
   background-color: rgba(148, 163, 184, 0.7);
   border-radius: 9999px;
   border: 2px solid rgba(15, 23, 42, 0.3);
+}
+
+.glass-panel {
+  border-radius: 32px;
+  border: 1px solid var(--card-border);
+  background: var(--card-surface);
+  box-shadow: 0 35px 80px rgba(242, 132, 198, 0.25);
+  backdrop-filter: blur(24px);
 }
