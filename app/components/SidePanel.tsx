@@ -844,27 +844,6 @@ export default function SidePanel() {
         </section>
 
         <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
-          <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>Commands</h3>
-          {commands.length ? (
-            <ul className='space-y-2 text-xs text-[var(--panel-muted)]'>
-              {commands.map((command) => (
-                <li key={command.id} className='rounded border border-[var(--panel-border)]/40 bg-black/10 p-2'>
-                  <p className='font-mono text-[11px] text-[var(--panel-foreground)]'>{command.command}</p>
-                  <p className='text-[10px] uppercase tracking-wide text-[var(--panel-muted)]'>Status: {command.status}</p>
-                  {command.output ? (
-                    <pre className='mt-1 max-h-24 overflow-auto rounded bg-black/40 p-2 text-[10px] text-[var(--panel-foreground)] whitespace-pre-wrap'>
-                      {command.output}
-                    </pre>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className='text-xs text-[var(--panel-muted)]'>Command output will appear here.</p>
-          )}
-        </section>
-
-        <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
           <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>File changes</h3>
           {files.length ? (
             <ul className='space-y-2 text-xs text-[var(--panel-muted)]'>
@@ -912,6 +891,27 @@ export default function SidePanel() {
           {usage ? (
             <p className='text-[10px] text-[var(--panel-muted)]'>Usage — input: {usage.inputTokens} · output: {usage.outputTokens}</p>
           ) : null}
+        </section>
+
+        <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
+          <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>Commands</h3>
+          {commands.length ? (
+            <ul className='space-y-2 text-xs text-[var(--panel-muted)]'>
+              {commands.map((command) => (
+                <li key={command.id} className='rounded border border-[var(--panel-border)]/40 bg-black/10 p-2'>
+                  <p className='font-mono text-[11px] text-[var(--panel-foreground)]'>{command.command}</p>
+                  <p className='text-[10px] uppercase tracking-wide text-[var(--panel-muted)]'>Status: {command.status}</p>
+                  {command.output ? (
+                    <pre className='mt-1 max-h-24 overflow-auto rounded bg-black/40 p-2 text-[10px] text-[var(--panel-foreground)] whitespace-pre-wrap'>
+                      {command.output}
+                    </pre>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className='text-xs text-[var(--panel-muted)]'>Command output will appear here.</p>
+          )}
         </section>
 
         <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
