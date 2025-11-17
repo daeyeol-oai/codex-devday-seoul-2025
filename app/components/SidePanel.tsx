@@ -896,7 +896,7 @@ export default function SidePanel() {
         <section className='space-y-3 rounded-lg border border-[var(--panel-border)]/60 bg-white/5 p-4'>
           <h3 className='text-xs font-semibold uppercase tracking-[0.2em] text-[var(--panel-muted)]'>Commands</h3>
           {commands.length ? (
-            <ul className='space-y-2 text-xs text-[var(--panel-muted)]'>
+            <ul className='space-y-2 text-xs text-[var(--panel-muted)] max-h-[100px] overflow-y-auto pr-1'>
               {commands.map((command) => (
                 <li key={command.id} className='rounded border border-[var(--panel-border)]/40 bg-black/10 p-2'>
                   <p className='font-mono text-[11px] text-[var(--panel-foreground)]'>{command.command}</p>
