@@ -2,8 +2,6 @@
 
 ## Project Structure & Module Organization
 The project is a Next.js App Router workspace. Route entry points live in `app/`; `app/page.tsx` renders the default landing page and `app/layout.tsx` wires global providers. Shared styles reside in `app/globals.css`. Static assets such as icons, fonts, and images belong in `public/`. Configuration files (`next.config.ts`, `tsconfig.json`, `postcss.config.mjs`, `eslint.config.mjs`) sit at the root; adjust them rather than duplicating settings inside source folders.
-- Track implementation progress inside `plan.md`; review items before starting and update the checklist as tasks are completed.
-- Before beginning work, confirm `plan.md` reflects the latest scope; update the checklist whenever the plan changes.
 
 ## Build, Test, and Development Commands
 Use `npm run dev` for the local development server at `http://localhost:3000`, which hot-reloads on file changes. `npm run build` produces the optimized production bundle; run it before release-focused pull requests. Start a production build locally with `npm run start` after building to validate server behaviour. Quality gate with `npm run lint`, which applies the Next.js ESLint preset.
@@ -21,9 +19,9 @@ Write commits in the imperative mood (`Add landing hero layout`) and keep them s
 
 ## Codex Agent Workflow Notes
 - `/api/codex/agent` streams Codex SDK events as Server-Sent Events using the unified format `event: message` with `{ type, text, payload }`, plus a terminal `event: done` carrying `{ ok: true/false }`.
-- Codex runs within `workspace-write` sandbox mode confined to the repository root. No automatic git snapshot is created at turn start; snapshots are deferred to the edit-application phase (planned in `plan.md` section 10).
+- Codex runs within `workspace-write` sandbox mode confined to the repository root. No automatic git snapshot is created at turn start; snapshots are deferred to the edit-application phase.
 - `/api/codex/theme` and `/api/codex/undo` now return `{ ok: true/false, ... }` so the UI can provide consistent feedback.
-- Further hardening tasks—edit verification, abort handling, snapshot cleanup—are tracked under “Codex Workflow Hardening” in `plan.md` and should be referenced before extending the agent.
+- Further hardening tasks—edit verification, abort handling, snapshot cleanup—are tracked under “Codex Workflow Hardening” in the historical plan backup and should be referenced before extending the agent.
 
 ## Image Generation Notes
 - `/api/images/generate` accepts text-only prompts and an optional sketch. When supplied, the sketch is normalized to PNG and passed to the OpenAI Images edit endpoint; otherwise the prompt is sent to `images.generate`.
