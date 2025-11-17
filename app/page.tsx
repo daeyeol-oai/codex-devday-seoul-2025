@@ -74,20 +74,23 @@ export default function HomePage() {
     setSketchFile(file)
     setSketchLabel(file ? file.name : 'No file chosen')
     if (file) {
-      const previewUrl = URL.createObjectURL(file)
-      setSketchPreview(previewUrl)
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setSketchPreview(reader.result)
+        } else {
+          setSketchPreview(null)
+        }
+      }
+      reader.onerror = () => {
+        console.error('Failed to read sketch preview', reader.error)
+        setSketchPreview(null)
+      }
+      reader.readAsDataURL(file)
     } else {
       setSketchPreview(null)
     }
   }, [])
-
-  useEffect(() => {
-    return () => {
-      if (sketchPreview) {
-        URL.revokeObjectURL(sketchPreview)
-      }
-    }
-  }, [sketchPreview])
 
   const applyProgressSnapshot = useCallback((snapshot: VideoProgressSnapshot | null) => {
     setProgress(snapshot)
