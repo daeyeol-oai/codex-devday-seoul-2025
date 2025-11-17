@@ -316,7 +316,7 @@ export default function SidePanel() {
       setIsInpaintingOpen(true)
     } catch (err) {
       console.error('Failed to capture viewport for inpainting', err)
-      setErrorMessage('화면 캡처에 실패했어요. 다시 시도해 주세요.')
+      setErrorMessage('Screen capture failed. Please try again.')
     } finally {
       setIsCapturing(false)
     }
@@ -441,6 +441,9 @@ export default function SidePanel() {
       if (event === 'done') {
         const record = asRecord(payload)
         const ok = record ? Boolean(record.ok) : true
+        if (typeof record?.hasSnapshots === 'boolean') {
+          setSnapshotAvailable(record.hasSnapshots)
+        }
         setIsRunning(false)
         if (!ok && !errorMessage) {
           setErrorMessage('Codex run failed')
