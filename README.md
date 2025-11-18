@@ -1,38 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Building Stories
 
-> **Backend mocks**: Node runtime API routes live under `app/api/` and simulate the image generation, latest asset lookup, video generation, and Codex builder endpoints. See `docs/backend-api.md` for request/response contracts and environment requirements.
+Builder is a Next.js App Router project that lets you upload a sketch, generate GPT‑Image references, and request a Sora clip from the same run. API routes under `app/api/` talk directly to OpenAI (images + videos) and power the in-app Codex agent.
 
-## Getting Started
+## Requirements
 
-First, run the development server:
+- Node.js 20+
+- `OPENAI_API_KEY` available to the Next.js runtime
+
+Install dependencies once:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Commands
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Start the local dev server at http://localhost:3000 |
+| `npm run build` | Create the production bundle |
+| `npm run start` | Serve the production build |
+| `npm run lint` | Run ESLint with the Next.js preset |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Development Notes
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Image/video outputs are written to `public/outputs/<runId>` so the UI can fetch them without extra storage.
+- The Codex sidebar streams runs through `/api/codex/*`; refer to `app/components/SidePanel.tsx` for the client flow.
+- For more detailed API contracts or history, see the files in `docs/`.
