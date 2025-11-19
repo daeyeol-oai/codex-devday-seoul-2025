@@ -2,6 +2,12 @@
 
 Builder is a Next.js App Router project that lets you upload a sketch, generate GPT‑Image references, and request a Sora clip from the same run. API routes under `app/api/` talk directly to OpenAI (images + videos) and power the in-app Codex agent.
 
+## Demo Recording
+
+![Codex Demo – DDX 2025 Seoul](docs/Codex%20Demo%20-%20DDX%202025%20Seoul.gif)
+
+- The GIF above (`docs/Codex Demo - DDX 2025 Seoul.gif`) is a quick capture of the demo walkthrough. Watch the [full-length recording](https://drive.google.com/file/d/16X7p0tSB6riMvHvW1KfGnM6mE3GxvEuU/view) for every interaction and narration beat.
+
 ## Requirements
 
 - Node.js 20+
@@ -27,12 +33,6 @@ npm install
 - Image/video outputs are written to `public/outputs/<runId>` so the UI can fetch them without extra storage.
 - The Codex sidebar streams runs through `/api/codex/*`; refer to `app/components/SidePanel.tsx` for the client flow.
 - For more detailed API contracts or history, see the files in `docs/`.
-
-## Demo Recording
-
-![Codex Demo – DDX 2025 Seoul](docs/Codex%20Demo%20-%20DDX%202025%20Seoul.gif)
-
-- The GIF above (`docs/Codex Demo - DDX 2025 Seoul.gif`) is a quick capture of the demo walkthrough. Watch the [full-length recording](https://drive.google.com/file/d/16X7p0tSB6riMvHvW1KfGnM6mE3GxvEuU/view) for every interaction and narration beat.
 
 ## Codex Cloud Best-of-N
 
