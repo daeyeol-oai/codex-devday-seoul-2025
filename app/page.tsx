@@ -13,7 +13,10 @@ import type {
   VideoProgressSnapshot,
 } from '@/types/media'
 
-type VideoResult = VideoGenerationResponse['video']
+type VideoResult = Omit<VideoGenerationResponse['video'], 'relativePath' | 'token'> & {
+  relativePath?: string
+  token?: string
+}
 
 const PROGRESS_POLL_MS = 2000
 const LEGACY_PROGRESS_FILE = 'progress.json'
